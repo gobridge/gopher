@@ -1,0 +1,19 @@
+{
+	"ImportPath": "github.com/dlsniper/gopher",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/nlopes/slack",
+			"Comment": "v0.0.1-113-g6b76b2d",
+			"Rev": "6b76b2d5a0a6ee9cf0525ff74833a0e851a1959f"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "8e573f4005aa312856df2ea97c32b9beac70dd89"
+		}
+	]
+}
