@@ -21,7 +21,7 @@ build:
         code: |
           go test ./...
 
-    - sjoerdmulder/rsync-deploy@0.1.0
+    - rsync-deploy:
         host: www.gophercon.com
         directory: /var/bot
         sshkey: $DO_KEYS
