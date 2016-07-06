@@ -1,7 +1,7 @@
 # Gopher
 
-[![GoDoc](https://godoc.org/github.com/dlsniper/gopher?status.svg)](https://godoc.org/github.com/dlsniper/gopher)
-[![Go Report Card](https://goreportcard.com/badge/github.com/dlsniper/gopher)](https://goreportcard.com/report/github.com/dlsniper/gopher)
+[![GoDoc](https://godoc.org/github.com/gopher/gopher?status.svg)](https://godoc.org/github.com/gopheracademy/gopher)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gopheracademy/gopher)](https://goreportcard.com/report/github.com/gopheracademy/gopher)
 
 This is a Slack bot for the Gophers Slack.
 
