@@ -20,3 +20,8 @@ build:
         name: go test
         code: |
           go test ./...
+
+    - sjoerdmulder/rsync-deploy@0.1.0
+        host: www.gophercon.com
+        directory: /var/bot
+        sshkey: $DO_KEYS
