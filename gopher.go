@@ -170,7 +170,7 @@ Just click on the channel list and search for anything that crosses your mind.
 
 To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
-Final thing, #general might be too chatty at times but don't be shy to ask your Go related question if the things don't feel like Go related, the other gophers will help you out.
+Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
 
 
 Now enjoy your stay and have fun.`
