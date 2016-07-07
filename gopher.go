@@ -209,6 +209,12 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	// All the variations of table flip seem to include this characters so... potato?
+	if strings.Contains(eventText, "︵") || strings.Contains(eventText, "彡") {
+		tableUnflip(event)
+		return
+	}
+
 	if strings.Contains(eventText, "oss help") {
 		ossHelp(event)
 		return
@@ -242,7 +248,8 @@ func handleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.Contains(eventText, strings.ToLower(botName)) || strings.Contains(eventText, strings.ToLower(botID)) {
-		if strings.Contains(eventText, "thank") {
+		if strings.Contains(eventText, "thank") ||
+			strings.Contains(eventText, "cheers") {
 			gopherize(event)
 		}
 		return
@@ -380,6 +387,15 @@ func goForks(event *slack.MessageEvent) {
 func dealWithHTTPTimeouts(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{}
 	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help you deal with http timeouts: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func tableUnflip(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{}
+	_, _, err := slackAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
