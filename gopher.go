@@ -143,10 +143,6 @@ func main() {
 }
 
 func teamJoined(event *slack.TeamJoinEvent) {
-	if devMode != "true" && event.User.ID != "U03L9MPTE" {
-		return
-	}
-
 	message := `Hello ` + event.User.Name + `,
 
 
@@ -185,16 +181,6 @@ Now enjoy your stay and have fun.`
 
 func handleMessage(event *slack.MessageEvent) {
 	eventText := strings.ToLower(event.Text)
-	if devMode == "true" && strings.Contains(eventText, "just joined") {
-		evt := &slack.TeamJoinEvent{
-			User: slack.User{
-				ID:   "U03L9MPTE",
-				Name: "Florin",
-			},
-		}
-		teamJoined(evt)
-		return
-	}
 
 	if strings.Contains(eventText, "newbie resources") {
 		newbieResources(event)
