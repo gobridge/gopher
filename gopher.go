@@ -241,7 +241,10 @@ func handleMessage(event *slack.MessageEvent) {
 			strings.Contains(eventText, "cheers") ||
 			strings.Contains(eventText, "hello") ||
 			strings.Contains(eventText, "hi") {
-			gopherize(event)
+			reactToEvent(event, "gopher")
+		} else if strings.Contains(eventText, "wave") {
+			reactToEvent(event, "wave")
+			reactToEvent(event, "gopher")
 		}
 		return
 	}
@@ -344,13 +347,13 @@ func suggestPlayground(event *slack.MessageEvent) {
 	}
 
 	params := slack.PostMessageParameters{}
-	_, _, err = slackAPI.PostMessage(event.Channel, `I've uploaded this file to the Go Playground to allow for easier collaboration: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	_, _, err = slackAPI.PostMessage(event.Channel, `I've uploaded this file to the Go Playground to allow easier collaboration: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
 	}
 
-	_, _, err = slackAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using <https://play.golang.org>. Thank you.`, params)
+	_, _, err = slackAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. Thank you.`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
@@ -359,7 +362,7 @@ func suggestPlayground(event *slack.MessageEvent) {
 
 func ossHelp(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{}
-	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you <https://github.com/corylanou/oss-helpwanted>`, params)
+	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
@@ -434,12 +437,12 @@ func godoc(event *slack.MessageEvent, prefix string, position int) {
 	}
 }
 
-func gopherize(event *slack.MessageEvent) {
+func reactToEvent(event *slack.MessageEvent, reaction string) {
 	item := slack.ItemRef{
 		Channel:   event.Channel,
 		Timestamp: event.Timestamp,
 	}
-	err := slackAPI.AddReaction("gopher", item)
+	err := slackAPI.AddReaction(reaction, item)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
