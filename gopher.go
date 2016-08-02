@@ -411,7 +411,7 @@ func searchLibrary(event *slack.MessageEvent) {
 	}
 
 	searchTerm = strings.Trim(searchTerm, "? . ,")
-	if len(searchTerm) == 0 {
+	if len(searchTerm) == 0 || len(searchTerm) > 20 {
 		return
 	}
 	searchTerm = url.QueryEscape(searchTerm)
