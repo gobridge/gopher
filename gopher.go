@@ -119,7 +119,7 @@ func init() {
 	}(wg)
 
 	wg.Wait()
-	log.Printf("Initialized")
+	log.Printf("Initialized %s with ID: %s\n", botName, botID)
 }
 
 func main() {
@@ -135,7 +135,6 @@ func main() {
 
 			case *slack.TeamJoinEvent:
 				go teamJoined(message)
-
 			default:
 			}
 		}
@@ -181,6 +180,10 @@ Now enjoy your stay and have fun.`
 
 func handleMessage(event *slack.MessageEvent) {
 	eventText := strings.ToLower(event.Text)
+
+	if devMode == "true" {
+		log.Printf("got message: %s\n", eventText)
+	}
 
 	if strings.Contains(eventText, "newbie resources") {
 		newbieResources(event)
