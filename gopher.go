@@ -238,7 +238,9 @@ func handleMessage(event *slack.MessageEvent) {
 
 	if strings.Contains(eventText, strings.ToLower(botName)) || strings.Contains(eventText, strings.ToLower(botID)) {
 		if strings.Contains(eventText, "thank") ||
-			strings.Contains(eventText, "cheers") {
+			strings.Contains(eventText, "cheers") ||
+			strings.Contains(eventText, "hello") ||
+			strings.Contains(eventText, "hi") {
 			gopherize(event)
 		}
 		return
