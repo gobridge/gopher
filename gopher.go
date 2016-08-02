@@ -342,13 +342,13 @@ func suggestPlayground(event *slack.MessageEvent) {
 	}
 
 	params := slack.PostMessageParameters{}
-	_, _, err = slackAPI.PostMessage(event.Channel, `I've uploaded this file to the Go Playground as that's where Go files should be shared from: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	_, _, err = slackAPI.PostMessage(event.Channel, `I've uploaded this file to the Go Playground to allow for easier collaboration: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
 	}
 
-	_, _, err = slackAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To make this easier to get help, please use <https://play.golang.org>. Thank you.`, params)
+	_, _, err = slackAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using <https://play.golang.org>. Thank you.`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
