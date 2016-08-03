@@ -28,13 +28,13 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
-	"time"
-
-	"net/url"
 	"sync"
+	"time"
 
 	"github.com/nlopes/slack"
 )
@@ -45,11 +45,13 @@ type slackChan struct {
 }
 
 var (
-	botName    = os.Getenv("GOPHERS_SLACK_BOT_NAME")
-	botID      = ""
-	slackToken = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
-	devMode    = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
-	slackAPI   = slack.New(slackToken)
+	botName     = os.Getenv("GOPHERS_SLACK_BOT_NAME")
+	botID       = ""
+	slackToken  = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
+	devMode     = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
+	slackAPI    = slack.New(slackToken)
+	emojiRE     = regexp.MustCompile(`\:[[:alnum:]]+\:`)
+	slackLinkRE = regexp.MustCompile(`\<((?:\@u)|(?:\#c))[0-9a-z]+\>`)
 
 	channels = map[string]slackChan{
 		"golang-newbies": {description: "for newbie resources"},
@@ -406,17 +408,20 @@ func searchLibrary(event *slack.MessageEvent) {
 		searchTerm = event.Text[idx+14:]
 	}
 
+	searchTerm = slackLinkRE.ReplaceAllString(searchTerm, "")
+	searchTerm = emojiRE.ReplaceAllString(searchTerm, "")
+
 	if idx := strings.Index(searchTerm, "in go"); idx != -1 {
 		searchTerm = searchTerm[:idx] + searchTerm[idx+5:]
 	}
 
-	searchTerm = strings.Trim(searchTerm, "? . ,")
-	if len(searchTerm) == 0 || len(searchTerm) > 20 {
+	searchTerm = strings.Trim(searchTerm, "?;., ")
+	if len(searchTerm) == 0 || len(searchTerm) > 100 {
 		return
 	}
 	searchTerm = url.QueryEscape(searchTerm)
 	params := slack.PostMessageParameters{}
-	_, _, err := slackAPI.PostMessage(event.Channel, `<https://godoc.org/?q=`+searchTerm+`>`, params)
+	_, _, err := slackAPI.PostMessage(event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
