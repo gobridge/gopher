@@ -181,6 +181,10 @@ Now enjoy your stay and have fun.`
 }
 
 func handleMessage(event *slack.MessageEvent) {
+	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
+		return
+	}
+
 	eventText := strings.ToLower(event.Text)
 
 	if devMode == "true" {
@@ -382,7 +386,7 @@ func goForks(event *slack.MessageEvent) {
 
 func dealWithHTTPTimeouts(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{}
-	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help you deal with http timeouts: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
+	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
