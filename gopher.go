@@ -220,7 +220,7 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, "deal with http timeouts") {
+	if strings.Contains(eventText, "blog about http timeouts") {
 		dealWithHTTPTimeouts(event)
 		return
 	}
