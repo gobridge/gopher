@@ -50,8 +50,8 @@ var (
 	slackToken  = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
 	devMode     = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
 	slackAPI    = slack.New(slackToken)
-	emojiRE     = regexp.MustCompile(`\:[[:alnum:]]+\:`)
-	slackLinkRE = regexp.MustCompile(`\<((?:\@u)|(?:\#c))[0-9a-z]+\>`)
+	emojiRE     = regexp.MustCompile(`:[[:alnum:]]+:`)
+	slackLinkRE = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
 
 	channels = map[string]slackChan{
 		"golang-newbies": {description: "for newbie resources"},
