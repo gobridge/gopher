@@ -1,5 +1,6 @@
 # Gopher
 
+[![CircleCI](https://circleci.com/gh/gopheracademy/gopher.svg?style=svg)](https://circleci.com/gh/gopheracademy/gopher)
 [![GoDoc](https://godoc.org/github.com/gopher/gopher?status.svg)](https://godoc.org/github.com/gopheracademy/gopher)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gopheracademy/gopher)](https://goreportcard.com/report/github.com/gopheracademy/gopher)
 
