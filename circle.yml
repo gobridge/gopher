@@ -1,0 +1,29 @@
+machine:
+  environment:
+    PROJECT_NAME: gopher-slack-bot
+    CLUSTER_NAME: gopher-slack-bot
+    CLOUDSDK_COMPUTE_ZONE: eu-west-1
+    DEBIAN_FRONTEND: noninteractive
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update
+    - sudo /opt/google-cloud-sdk/bin/gcloud --quiet components update kubectl
+    - echo $ACCT_AUTH | base64 --decode -i > ${HOME}/account-auth.json
+    - sudo /opt/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/account-auth.json
+    - sudo /opt/google-cloud-sdk/bin/gcloud --quiet config set container/cluster $CLUSTER_NAME
+    - sudo /opt/google-cloud-sdk/bin/gcloud --quiet config set compute/zone ${CLOUDSDK_COMPUTE_ZONE}
+    - sudo /opt/google-cloud-sdk/bin/gcloud --quiet container clusters get-credentials $CLUSTER_NAME
+    - ./container-make.sh
+
+test:
+  override:
+    - ./container-test.sh
+
+deployment:
+  prod:
+    branch: master
+    commands:
+      - ./container-deploy.sh

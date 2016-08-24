@@ -49,6 +49,7 @@ var (
 	botID       = ""
 	slackToken  = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
 	devMode     = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
+	version     = "HEAD"
 	slackAPI    = slack.New(slackToken)
 	emojiRE     = regexp.MustCompile(`:[[:alnum:]]+:`)
 	slackLinkRE = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
