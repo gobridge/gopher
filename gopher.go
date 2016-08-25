@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"github.com/nlopes/slack"
+	"fmt"
 )
 
 type slackChan struct {
@@ -49,7 +50,7 @@ var (
 	botID       = ""
 	slackToken  = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
 	devMode     = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
-	version     = "HEAD"
+	botVersion = "HEAD"
 	slackAPI    = slack.New(slackToken)
 	emojiRE     = regexp.MustCompile(`:[[:alnum:]]+:`)
 	slackLinkRE = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
@@ -253,6 +254,10 @@ func handleMessage(event *slack.MessageEvent) {
 			reactToEvent(event, "wave")
 			reactToEvent(event, "gopher")
 		}
+
+		if strings.Contains(eventText, "version") {
+			replyVersion(event)
+		}
 		return
 	}
 }
@@ -453,6 +458,15 @@ func reactToEvent(event *slack.MessageEvent, reaction string) {
 		Timestamp: event.Timestamp,
 	}
 	err := slackAPI.AddReaction(reaction, item)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func replyVersion(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{}
+	_, _, err := slackAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", botVersion), params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
