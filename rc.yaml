@@ -1,0 +1,49 @@
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: gopher-slack-bot
+  namespace: gopher-slack-bot
+  labels:
+    app: gopher-slack-bot
+    version: cb1df9980ce8a59fb6b1aaf8fd38af6832a162fc
+  annotations:
+    description: Gopher Slack Bot
+spec:
+  replicas: 1
+  selector:
+    app: gopher-slack-bot
+    version: cb1df9980ce8a59fb6b1aaf8fd38af6832a162fc
+  template:
+    metadata:
+      name: gopher-slack-bot
+      labels:
+        app: gopher-slack-bot
+        version: cb1df9980ce8a59fb6b1aaf8fd38af6832a162fc
+      annotations:
+        description: Gopher Slack Bot
+    spec:
+        containers:
+          - name: gopher-slack-bot
+            image: eu.gcr.io/gopher-slack-bot/bot:latest
+            resources:
+              requests:
+                cpu: 200m
+                memory: 100Mi
+            terminationMessagePath: /dev/termination-log
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              privileged: false
+            env:
+              - name: GOPHERS_SLACK_BOT_NAME
+                valueFrom:
+                  secretKeyRef:
+                    name: gophersecret
+                    key: botname
+              - name: GOPHERS_SLACK_BOT_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: gophersecret
+                    key: token
+        restartPolicy: Always
+        terminationGracePeriodSeconds: 30
+        dnsPolicy: ClusterFirst

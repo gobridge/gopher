@@ -16,6 +16,17 @@ token
 - ` GOPHERS_SLACK_BOT_NAME ` - the Slack bot name (in development `tempbot` is used)
 - ` GOPHERS_SLACK_BOT_DEV_MODE ` - boolean, set the bot in development mode
 
+## Kubernetes
+
+To get the bot running in Kubernetes you need to run the following commands:
+
+```
+cp secrets.yaml.template secrets.yaml
+echo `echo -n 'slackTokenHere' | base64` >> secrets.yaml
+kubectl create -f ./secrets.yaml --namespace=gopher-slack-bot
+kubectl create -f ./rc.yaml --namespace=gopher-slack-bot
+```
+
 ## License
 
 This software is created under Apache v2 License. For the full license text, please see License.md
