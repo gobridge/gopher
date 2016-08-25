@@ -227,13 +227,6 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, "library for") ||
-		strings.Contains(eventText, "library in go for") ||
-		strings.Contains(eventText, "go library for") {
-		searchLibrary(event)
-		return
-	}
-
 	if strings.HasPrefix(eventText, "ghd/") {
 		godoc(event, "github.com/", 4)
 		return
@@ -245,14 +238,25 @@ func handleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.Contains(eventText, strings.ToLower(botName)) || strings.Contains(eventText, strings.ToLower(botID)) {
+		if strings.Contains(eventText, "library for") ||
+			strings.Contains(eventText, "library in go for") ||
+			strings.Contains(eventText, "go library for") {
+			searchLibrary(event)
+			return
+		}
+
 		if strings.Contains(eventText, "thank") ||
 			strings.Contains(eventText, "cheers") ||
 			strings.Contains(eventText, "hello") ||
 			strings.Contains(eventText, "hi") {
 			reactToEvent(event, "gopher")
-		} else if strings.Contains(eventText, "wave") {
+			return
+		}
+
+		if strings.Contains(eventText, "wave") {
 			reactToEvent(event, "wave")
 			reactToEvent(event, "gopher")
+			return
 		}
 
 		if strings.Contains(eventText, "version") {
