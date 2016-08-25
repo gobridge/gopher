@@ -2,7 +2,7 @@ machine:
   environment:
     PROJECT_NAME: gopher-slack-bot
     CLUSTER_NAME: gopher-slack-bot
-    CLOUDSDK_COMPUTE_ZONE: eu-west-1
+    CLOUDSDK_COMPUTE_ZONE: europe-west1-d
     DEBIAN_FRONTEND: noninteractive
   services:
     - docker
