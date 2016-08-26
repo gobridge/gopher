@@ -281,8 +281,9 @@ There are some awesome websites as well:
  - <http://gotime.fm> For a weekly podcast of Go awesomeness
  - <https://gobyexample.com> If you are looking for examples of how to do things in Go
  - <http://go-database-sql.org> If you are looking for how to use SQL databases in Go
+ - <http://gophervids.appspot.com> For a list of Go related videos from various authors
 
-Finally, you should visit <https://github.com/golang/go/wiki#learning-more-about-go>`,
+Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a list of more resources to learn Go`,
 	}
 
 	params := slack.PostMessageParameters{}
