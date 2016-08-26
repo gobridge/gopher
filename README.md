@@ -21,6 +21,16 @@ token
 To get the bot running in Kubernetes you need to run the following commands:
 
 ```
+gcloud container clusters create gopher-slack-bot \
+    --zone europe-west1-c \
+    --additional-zones=europe-west1-d,europe-west1-b \
+    --num-nodes=1 \
+    --local-ssd-count=0 \
+    --machine-type=f1-micro \
+    --disk-size=10
+
+kubectl create namespace gopher-slack-bot
+
 cp secrets.yaml.template secrets.yaml
 echo `echo -n 'slackTokenHere' | base64` >> secrets.yaml
 kubectl create -f ./secrets.yaml --namespace=gopher-slack-bot

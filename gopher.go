@@ -36,8 +36,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nlopes/slack"
 	"fmt"
+
+	"github.com/nlopes/slack"
 )
 
 type slackChan struct {
@@ -50,7 +51,7 @@ var (
 	botID       = ""
 	slackToken  = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
 	devMode     = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
-	botVersion = "HEAD"
+	botVersion  = "HEAD"
 	slackAPI    = slack.New(slackToken)
 	emojiRE     = regexp.MustCompile(`:[[:alnum:]]+:`)
 	slackLinkRE = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
@@ -174,7 +175,7 @@ Final thing, #general might be too chatty at times but don't be shy to ask your 
 
 Now enjoy your stay and have fun.`
 
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.User.ID, message, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -286,7 +287,7 @@ There are some awesome websites as well:
 Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a list of more resources to learn Go`,
 	}
 
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	params.Attachments = []slack.Attachment{newbieResources}
 	_, _, err := slackAPI.PostMessage(event.Channel, "Here are some resources you might want to check if you are new to Go:", params)
 	if err != nil {
@@ -363,7 +364,7 @@ func suggestPlayground(event *slack.MessageEvent) {
 		return
 	}
 
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = slackAPI.PostMessage(event.Channel, `I've uploaded this file to the Go Playground to allow easier collaboration: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -378,7 +379,7 @@ func suggestPlayground(event *slack.MessageEvent) {
 }
 
 func ossHelp(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -387,7 +388,7 @@ func ossHelp(event *slack.MessageEvent) {
 }
 
 func goForks(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help you to work with forks for Go libraries: <http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -396,7 +397,7 @@ func goForks(event *slack.MessageEvent) {
 }
 
 func dealWithHTTPTimeouts(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -405,7 +406,7 @@ func dealWithHTTPTimeouts(event *slack.MessageEvent) {
 }
 
 func tableUnflip(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -435,7 +436,7 @@ func searchLibrary(event *slack.MessageEvent) {
 		return
 	}
 	searchTerm = url.QueryEscape(searchTerm)
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -449,7 +450,7 @@ func godoc(event *slack.MessageEvent, prefix string, position int) {
 		link = link[:strings.Index(link, " ")]
 	}
 
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -470,7 +471,7 @@ func reactToEvent(event *slack.MessageEvent, reaction string) {
 }
 
 func replyVersion(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{}
+	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", botVersion), params)
 	if err != nil {
 		log.Printf("%s\n", err)
