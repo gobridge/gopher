@@ -265,6 +265,10 @@ func handleMessage(event *slack.MessageEvent) {
 			return
 		}
 
+		if strings.Contains(eventText, "where do you live?") {
+			replyBotLocation(event)
+		}
+
 		if strings.Contains(eventText, "version") {
 			replyVersion(event)
 		}
@@ -478,6 +482,15 @@ func reactToEvent(event *slack.MessageEvent, reaction string) {
 func replyVersion(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", botVersion), params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func replyBotLocation(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := slackAPI.PostMessage(event.User, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>", params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
