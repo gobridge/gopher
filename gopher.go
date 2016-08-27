@@ -218,8 +218,13 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, "go forks") {
+	if strings.Contains(eventText, "work with go forks") {
 		goForks(event)
+		return
+	}
+
+	if strings.Contains(eventText, "my adorable little gophers") {
+		reactToEvent(event, "gopher")
 		return
 	}
 
