@@ -243,7 +243,7 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, strings.ToLower(botName)) || strings.Contains(eventText, strings.ToLower(botID)) {
+	if strings.Contains(eventText, strings.ToLower("@"+botName)) || strings.Contains(eventText, strings.ToLower(botID)) {
 		if strings.Contains(eventText, "library for") ||
 			strings.Contains(eventText, "library in go for") ||
 			strings.Contains(eventText, "go library for") {
