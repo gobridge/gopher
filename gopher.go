@@ -490,7 +490,7 @@ func replyVersion(event *slack.MessageEvent) {
 
 func replyBotLocation(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>", params)
+	_, _, err := slackAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
