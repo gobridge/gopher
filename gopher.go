@@ -39,6 +39,7 @@ import (
 	"fmt"
 
 	"github.com/nlopes/slack"
+	"k8s.io/kubernetes/third_party/golang/go/doc/testdata"
 )
 
 type slackChan struct {
@@ -62,6 +63,18 @@ var (
 		"showandtell":    {description: "tell the world about the thing you are working on"},
 		"golang-jobs":    {description: "for jobs related to Go"},
 		// TODO add more channels to share with the newbies?
+	}
+
+	httpClient = &http.Client{
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout:   15 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout:   5 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
 )
 
@@ -316,22 +329,10 @@ func suggestPlayground(event *slack.MessageEvent) {
 		return
 	}
 
-	c := &http.Client{
-		Transport: &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout:   15 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).Dial,
-			TLSHandshakeTimeout:   5 * time.Second,
-			ResponseHeaderTimeout: 10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
-
 	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Authorization", "Bearer "+slackToken)
-	resp, err := c.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.Printf("error while fetching the file %v\n", err)
 		return
@@ -355,7 +356,7 @@ func suggestPlayground(event *slack.MessageEvent) {
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Content-Length", strconv.Itoa(len(file)))
 
-	resp, err = c.Do(req)
+	resp, err = httpClient.Do(req)
 	if err != nil {
 		log.Printf("failed to get playground link: %v", err)
 		return
@@ -374,7 +375,7 @@ func suggestPlayground(event *slack.MessageEvent) {
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = slackAPI.PostMessage(event.Channel, `I've uploaded this file to the Go Playground to allow easier collaboration: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	_, _, err = slackAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
