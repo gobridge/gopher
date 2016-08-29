@@ -24,6 +24,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -36,10 +37,7 @@ import (
 	"sync"
 	"time"
 
-	"fmt"
-
 	"github.com/nlopes/slack"
-	"k8s.io/kubernetes/third_party/golang/go/doc/testdata"
 )
 
 type slackChan struct {
