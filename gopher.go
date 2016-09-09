@@ -234,6 +234,11 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "block forever in go") {
+		goForks(event)
+		return
+	}
+
 	if strings.Contains(eventText, "my adorable little gophers") {
 		reactToEvent(event, "gopher")
 		return
@@ -397,7 +402,16 @@ func ossHelp(event *slack.MessageEvent) {
 
 func goForks(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help you to work with forks for Go libraries: <http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
+	_, _, err := slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func goBlockForever(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
