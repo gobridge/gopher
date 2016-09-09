@@ -32,6 +32,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,14 +47,15 @@ type slackChan struct {
 }
 
 var (
-	botName     = os.Getenv("GOPHERS_SLACK_BOT_NAME")
-	botID       = ""
-	slackToken  = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
-	devMode     = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
-	botVersion  = "HEAD"
-	slackAPI    = slack.New(slackToken)
-	emojiRE     = regexp.MustCompile(`:[[:alnum:]]+:`)
-	slackLinkRE = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
+	botName        = os.Getenv("GOPHERS_SLACK_BOT_NAME")
+	botID          = ""
+	dlsniperUserID = ""
+	slackToken     = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
+	devMode        = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
+	botVersion     = "HEAD"
+	slackAPI       = slack.New(slackToken)
+	emojiRE        = regexp.MustCompile(`:[[:alnum:]]+:`)
+	slackLinkRE    = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
 
 	channels = map[string]slackChan{
 		"golang-newbies": {description: "for newbie resources"},
@@ -96,7 +98,7 @@ func init() {
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		log.Println("Determining bot user ID")
+		log.Println("Determining bot / dlsniper user ID")
 		users, err := slackAPI.GetUsers()
 		if err != nil {
 			log.Fatal(err)
@@ -104,6 +106,9 @@ func init() {
 
 		for _, user := range users {
 			if !user.IsBot {
+				if user.Name == "dlsniper" {
+					dlsniperUserID = user.ID
+				}
 				continue
 			}
 
@@ -140,7 +145,17 @@ func init() {
 
 func main() {
 	rtm := slackAPI.NewRTM()
-	go rtm.ManageConnection()
+	go func() {
+		go rtm.ManageConnection()
+		runtime.Gosched()
+
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := slackAPI.PostMessage(dlsniperUserID, fmt.Sprintf(`Deployed version: %s`, botVersion), params)
+		if err != nil {
+			log.Printf("%s\n", err)
+			return
+		}
+	}()
 
 	for {
 		select {
@@ -235,7 +250,7 @@ func handleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.Contains(eventText, "block forever in go") {
-		goForks(event)
+		goBlockForever(event)
 		return
 	}
 
