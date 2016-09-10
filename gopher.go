@@ -535,13 +535,13 @@ func replyBotLocation(event *slack.MessageEvent) {
 }
 
 func replyFlipCoin(event *slack.MessageEvent) {
-	buff := make([]byte, 0, 1)
+	buff := make([]byte, 1, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
 		log.Printf("%s\n", err)
 	}
 	result := "heads"
-	if buff[0] == 1 {
+	if buff[0] % 2 == 0 {
 		result = "tail"
 	}
 	params := slack.PostMessageParameters{AsUser: true}
