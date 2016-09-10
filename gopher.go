@@ -24,6 +24,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -296,12 +297,20 @@ func handleMessage(event *slack.MessageEvent) {
 			return
 		}
 
+		if strings.Contains(eventText, "flip coin") ||
+			strings.Contains(eventText, "flip a coin") {
+			replyFlipCoin(event)
+			return
+		}
+
 		if strings.Contains(eventText, "where do you live?") {
 			replyBotLocation(event)
+			return
 		}
 
 		if strings.Contains(eventText, "version") {
 			replyVersion(event)
+			return
 		}
 		return
 	}
@@ -519,6 +528,24 @@ func replyVersion(event *slack.MessageEvent) {
 func replyBotLocation(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func replyFlipCoin(event *slack.MessageEvent) {
+	buff := make([]byte, 0, 1)
+	_, err := rand.Read(buff)
+	if err != nil {
+		log.Printf("%s\n", err)
+	}
+	result := "heads"
+	if buff[0] == 1 {
+		result = "tail"
+	}
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err = slackAPI.PostMessage(event.Channel, fmt.Sprintf("%s", result), params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
