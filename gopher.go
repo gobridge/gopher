@@ -184,6 +184,8 @@ This Slack is meant to connect gophers from all over the world in a central plac
 We have a few rules that you can see here: http://coc.golangbridge.org
 There is also a forum: https://forum.golangbridge.org
 
+If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
+
 Here's a list of a few channels you could join:
 `
 
