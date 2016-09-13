@@ -204,7 +204,7 @@ Final thing, #general might be too chatty at times but don't be shy to ask your 
 
 Now enjoy your stay and have fun.`
 
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, LinkNames: true}
 	_, _, err := slackAPI.PostMessage(event.User.ID, message, params)
 	if err != nil {
 		log.Printf("%s\n", err)
@@ -504,13 +504,12 @@ func searchLibrary(event *slack.MessageEvent) {
 
 func xkcd(event *slack.MessageEvent, imageLink string) {
 	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, fmt.Sprintf(`<%s>`, imageLink), params)
+	_, _, err := slackAPI.PostMessage(event.Channel, imageLink, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
 	}
 }
-
 
 func godoc(event *slack.MessageEvent, prefix string, position int) {
 	link := event.Text[position:]
@@ -563,7 +562,7 @@ func replyFlipCoin(event *slack.MessageEvent) {
 		log.Printf("%s\n", err)
 	}
 	result := "heads"
-	if buff[0] % 2 == 0 {
+	if buff[0]%2 == 0 {
 		result = "tail"
 	}
 	params := slack.PostMessageParameters{AsUser: true}
