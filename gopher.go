@@ -267,6 +267,11 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "xkcd:standards") {
+		xkcd(event, "https://xkcd.com/927/")
+		return
+	}
+
 	if strings.HasPrefix(eventText, "ghd/") {
 		godoc(event, "github.com/", 4)
 		return
@@ -491,6 +496,16 @@ func searchLibrary(event *slack.MessageEvent) {
 		return
 	}
 }
+
+func xkcd(event *slack.MessageEvent, imageLink string) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := slackAPI.PostMessage(event.Channel, fmt.Sprintf(`<%s>`, imageLink), params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
 
 func godoc(event *slack.MessageEvent, prefix string, position int) {
 	link := event.Text[position:]
