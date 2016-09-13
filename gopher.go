@@ -503,7 +503,7 @@ func searchLibrary(event *slack.MessageEvent) {
 }
 
 func xkcd(event *slack.MessageEvent, imageLink string) {
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, fmt.Sprintf(`<%s>`, imageLink), params)
 	if err != nil {
 		log.Printf("%s\n", err)
