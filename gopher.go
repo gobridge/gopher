@@ -204,7 +204,7 @@ Final thing, #general might be too chatty at times but don't be shy to ask your 
 
 Now enjoy your stay and have fun.`
 
-	params := slack.PostMessageParameters{AsUser: true, LinkNames: true}
+	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
 	_, _, err := slackAPI.PostMessage(event.User.ID, message, params)
 	if err != nil {
 		log.Printf("%s\n", err)
