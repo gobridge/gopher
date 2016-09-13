@@ -272,6 +272,11 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "xkcd:compiling") {
+		xkcd(event, "https://xkcd.com/303/")
+		return
+	}
+
 	if strings.HasPrefix(eventText, "ghd/") {
 		godoc(event, "github.com/", 4)
 		return
