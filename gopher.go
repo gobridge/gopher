@@ -274,6 +274,11 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "go database tutorial") {
+		goDatabaseTutorial(event)
+		return
+	}
+
 	if strings.Contains(eventText, "xkcd:standards") {
 		xkcd(event, "https://xkcd.com/927/")
 		return
@@ -460,6 +465,15 @@ func goForks(event *slack.MessageEvent) {
 func goBlockForever(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func goDatabaseTutorial(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := slackAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
