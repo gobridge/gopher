@@ -257,6 +257,13 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "hi guys") ||
+		strings.Contains(eventText, "hey guys") ||
+		strings.Contains(event.Text, "hello guys") {
+		gophersNotGuys(event)
+		return
+	}
+
 	if strings.Contains(eventText, "my adorable little gophers") {
 		reactToEvent(event, "gopher")
 		return
@@ -453,6 +460,15 @@ func goForks(event *slack.MessageEvent) {
 func goBlockForever(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
+	if err != nil {
+		log.Printf("%s\n", err)
+		return
+	}
+}
+
+func gophersNotGuys(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := slackAPI.PostMessage(event.Channel, `gophers, not guys :)`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
