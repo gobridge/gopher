@@ -181,8 +181,11 @@ Welcome to the Gophers Slack channel.
 
 This Slack is meant to connect gophers from all over the world in a central place.
 
-We have a few rules that you can see here: http://coc.golangbridge.org
-There is also a forum: https://forum.golangbridge.org
+We have a few rules that you can see here: http://coc.golangbridge.org.
+One of the rules is that we ask you to have a full name, the name people know you as, regardless of whether that corresponds with your ID or not.
+so that other gophers can recognize you easier.
+
+There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
 
 If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
 
@@ -266,6 +269,12 @@ func handleMessage(event *slack.MessageEvent) {
 
 	if strings.Contains(eventText, "my adorable little gophers") {
 		reactToEvent(event, "gopher")
+		return
+	}
+
+	if strings.Contains(eventText, "ermergerd") ||
+		strings.Contains(eventText, "ermahgerd") {
+		reactToEvent(event, "dragon")
 		return
 	}
 
