@@ -260,9 +260,9 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, "hi guys") ||
-		strings.Contains(eventText, "hey guys") ||
-		strings.Contains(event.Text, "hello guys") {
+	if strings.HasPrefix(eventText, "hi guys") ||
+		strings.HasPrefix(eventText, "hey guys") ||
+		strings.HasPrefix(event.Text, "hello guys") {
 		gophersNotGuys(event)
 		return
 	}
@@ -491,7 +491,7 @@ func goDatabaseTutorial(event *slack.MessageEvent) {
 
 func gophersNotGuys(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `gophers, not guys :)`, params)
+	_, _, err := slackAPI.PostMessage(event.User, `Hi please use gophers or folks not guys. Thank you :)`, params)
 	if err != nil {
 		log.Printf("%s\n", err)
 		return
