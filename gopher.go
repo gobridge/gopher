@@ -272,6 +272,11 @@ func handleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "bbq") {
+		reactToEvent(event, "bbqgopher")
+		return
+	}
+
 	if strings.Contains(eventText, "ermergerd") ||
 		strings.Contains(eventText, "ermahgerd") {
 		reactToEvent(event, "dragon")
