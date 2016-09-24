@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dlsniper/gopher/bot"
+	"github.com/gopheracademy/gopher/bot"
 
 	"github.com/nlopes/slack"
 )
