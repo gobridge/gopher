@@ -23,50 +23,40 @@
 package main
 
 import (
-	"bytes"
-	"crypto/rand"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
-	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/dlsniper/gopher/bot"
 
 	"github.com/nlopes/slack"
 )
 
-type slackChan struct {
-	description string
-	slackID     string
-}
+var botVersion = "HEAD"
 
-var (
-	botName        = os.Getenv("GOPHERS_SLACK_BOT_NAME")
-	botID          = ""
-	dlsniperUserID = ""
-	slackToken     = os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
-	devMode        = os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE")
-	botVersion     = "HEAD"
-	slackAPI       = slack.New(slackToken)
-	emojiRE        = regexp.MustCompile(`:[[:alnum:]]+:`)
-	slackLinkRE    = regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`)
+func main() {
+	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
+	slackToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
+	devMode := os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE") == "true"
 
-	channels = map[string]slackChan{
-		"golang-newbies": {description: "for newbie resources"},
-		"reviews":        {description: "for code reviews"},
-		"showandtell":    {description: "tell the world about the thing you are working on"},
-		"golang-jobs":    {description: "for jobs related to Go"},
-		// TODO add more channels to share with the newbies?
+	if slackToken == "" {
+		log.Fatal("slack token must be set in the GOPHERS_SLACK_BOT_TOKEN environment variable")
 	}
 
-	httpClient = &http.Client{
+	if botName == "" {
+		if devMode {
+			log.Fatal("bot name missing, set it with GOPHERS_SLACK_BOT_NAME")
+		}
+		botName = "tempbot"
+	}
+
+	slackAPI := slack.New(slackToken)
+
+	httpClient := &http.Client{
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
 				Timeout:   15 * time.Second,
@@ -77,547 +67,31 @@ var (
 			ExpectContinueTimeout: 1 * time.Second,
 		},
 	}
-)
-
-func init() {
-	if slackToken == "" {
-		log.Fatal("slack token must be set in the GOPHERS_SLACK_BOT_TOKEN environment variable")
-	}
-
-	if botName == "" {
-		if devMode != "true" {
-			log.Fatal("bot name missing, set it with GOPHERS_SLACK_BOT_NAME")
-		}
-		botName = "tempbot"
-	}
 
 	if strings.HasPrefix(botName, "@") {
 		botName = botName[1:]
 	}
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		log.Println("Determining bot / dlsniper user ID")
-		users, err := slackAPI.GetUsers()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		for _, user := range users {
-			if !user.IsBot {
-				if user.Name == "dlsniper" {
-					dlsniperUserID = user.ID
-				}
-				continue
-			}
-
-			if user.Name == botName {
-				botID = user.ID
-				break
-			}
-		}
-		if botID == "" {
-			log.Fatal("could not find bot in the list of names, check if the bot is called \"" + botName + "\" ")
-		}
-	}(wg)
-
-	wg.Add(1)
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		log.Println("Determining channels ID")
-		publicChannels, err := slackAPI.GetChannels(false)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		for _, channel := range publicChannels {
-			if chn, ok := channels[channel.Name]; ok {
-				chn.slackID = "#" + channel.ID
-				channels[channel.Name] = chn
-			}
-		}
-	}(wg)
-
-	wg.Wait()
-	log.Printf("Initialized %s with ID: %s\n", botName, botID)
-}
-
-func main() {
 	rtm := slackAPI.NewRTM()
-	go func() {
-		go rtm.ManageConnection()
-		runtime.Gosched()
+	go rtm.ManageConnection()
+	runtime.Gosched()
 
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := slackAPI.PostMessage(dlsniperUserID, fmt.Sprintf(`Deployed version: %s`, botVersion), params)
-		if err != nil {
-			log.Printf("%s\n", err)
-			return
-		}
-	}()
+	b := bot.NewBot(slackAPI, httpClient, botName, slackToken, botVersion, devMode, log.Printf)
+	if err := b.Init(rtm); err != nil {
+		panic(err)
+	}
 
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
 			switch message := msg.Data.(type) {
 			case *slack.MessageEvent:
-				go handleMessage(message)
+				go b.HandleMessage(message)
 
 			case *slack.TeamJoinEvent:
-				go teamJoined(message)
+				go b.TeamJoined(message)
 			default:
 			}
 		}
-	}
-}
-
-func teamJoined(event *slack.TeamJoinEvent) {
-	message := `Hello ` + event.User.Name + `,
-
-
-Welcome to the Gophers Slack channel.
-
-This Slack is meant to connect gophers from all over the world in a central place.
-
-We have a few rules that you can see here: http://coc.golangbridge.org.
-One of the rules is that we ask you to have a full name, the name people know you as, regardless of whether that corresponds with your ID or not.
-so that other gophers can recognize you easier.
-
-There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
-
-If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
-
-Here's a list of a few channels you could join:
-`
-
-	for idx := range channels {
-		message += `<` + channels[idx].slackID + `|` + idx + `> -> ` + channels[idx].description + "\n"
-	}
-
-	message += `
-There are quite a few other channels, depending on your interests or location (we have city / country wide channels).
-Just click on the channel list and search for anything that crosses your mind.
-
-To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
-
-Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
-
-
-Now enjoy your stay and have fun.`
-
-	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
-	_, _, err := slackAPI.PostMessage(event.User.ID, message, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func handleMessage(event *slack.MessageEvent) {
-	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
-		return
-	}
-
-	eventText := strings.ToLower(event.Text)
-
-	if devMode == "true" {
-		log.Printf("got message: %s\n", eventText)
-	}
-
-	if strings.Contains(eventText, "newbie resources") {
-		newbieResources(event)
-		return
-	}
-
-	// TODO should we check for ``` or messages of a certain length?
-	if !strings.Contains(eventText, "nolink") &&
-		event.File != nil &&
-		(event.File.Filetype == "go" || event.File.Filetype == "text") {
-		suggestPlayground(event)
-		return
-	}
-
-	// All the variations of table flip seem to include this characters so... potato?
-	if strings.Contains(eventText, "︵") || strings.Contains(eventText, "彡") {
-		tableUnflip(event)
-		return
-	}
-
-	if strings.Contains(eventText, "oss help") {
-		ossHelp(event)
-		return
-	}
-
-	if strings.Contains(eventText, "work with go forks") {
-		goForks(event)
-		return
-	}
-
-	if strings.Contains(eventText, "block forever in go") {
-		goBlockForever(event)
-		return
-	}
-
-	if strings.HasPrefix(eventText, "hi guys") ||
-		strings.HasPrefix(eventText, "hey guys") ||
-		strings.HasPrefix(event.Text, "hello guys") {
-		gophersNotGuys(event)
-		return
-	}
-
-	if strings.Contains(eventText, "my adorable little gophers") {
-		reactToEvent(event, "gopher")
-		return
-	}
-
-	if strings.Contains(eventText, "bbq") {
-		reactToEvent(event, "bbqgopher")
-		return
-	}
-
-	if strings.Contains(eventText, "ermergerd") ||
-		strings.Contains(eventText, "ermahgerd") {
-		reactToEvent(event, "dragon")
-		return
-	}
-
-	if strings.Contains(eventText, "blog about http timeouts") {
-		dealWithHTTPTimeouts(event)
-		return
-	}
-
-	if strings.Contains(eventText, "go database tutorial") {
-		goDatabaseTutorial(event)
-		return
-	}
-
-	if strings.Contains(eventText, "xkcd:standards") {
-		xkcd(event, "https://xkcd.com/927/")
-		return
-	}
-
-	if strings.Contains(eventText, "xkcd:compiling") {
-		xkcd(event, "https://xkcd.com/303/")
-		return
-	}
-
-	if strings.Contains(eventText, "xkcd:optimization") {
-		xkcd(event, "https://xkcd.com/1691/")
-		return
-	}
-
-	if strings.HasPrefix(eventText, "ghd/") {
-		godoc(event, "github.com/", 4)
-		return
-	}
-
-	if strings.HasPrefix(eventText, "d/") {
-		godoc(event, "", 2)
-		return
-	}
-
-	if strings.Contains(eventText, strings.ToLower("@"+botName)) || strings.Contains(eventText, strings.ToLower(botID)) {
-		if strings.Contains(eventText, "library for") ||
-			strings.Contains(eventText, "library in go for") ||
-			strings.Contains(eventText, "go library for") {
-			searchLibrary(event)
-			return
-		}
-
-		if strings.Contains(eventText, "thank") ||
-			strings.Contains(eventText, "cheers") ||
-			strings.Contains(eventText, "hello") ||
-			strings.Contains(eventText, "hi") {
-			reactToEvent(event, "gopher")
-			return
-		}
-
-		if strings.Contains(eventText, "wave") {
-			reactToEvent(event, "wave")
-			reactToEvent(event, "gopher")
-			return
-		}
-
-		if strings.Contains(eventText, "flip coin") ||
-			strings.Contains(eventText, "flip a coin") {
-			replyFlipCoin(event)
-			return
-		}
-
-		if strings.Contains(eventText, "where do you live?") {
-			replyBotLocation(event)
-			return
-		}
-
-		if strings.Contains(eventText, "version") {
-			replyVersion(event)
-			return
-		}
-		return
-	}
-}
-
-func newbieResources(event *slack.MessageEvent) {
-	newbieResources := slack.Attachment{
-		Text: `First you should take the language tour: <http://tour.golang.org/>
-
-Then, you should visit:
- - <https://golang.org/doc/code.html> To learn how to organize your Go workspace
- - <https://golang.org/doc/effective_go.html> which would help you be more effective at writing Go
- - <https://golang.org/ref/spec> will help you learn more about the language itself
- - <https://golang.org/doc/#articles> For a lot more reading material
-
-There are some awesome websites as well:
- - <https://blog.gopheracademy.com> Well great resources for Gophers in general
- - <http://gotime.fm> For a weekly podcast of Go awesomeness
- - <https://gobyexample.com> If you are looking for examples of how to do things in Go
- - <http://go-database-sql.org> If you are looking for how to use SQL databases in Go
- - <http://gophervids.appspot.com> For a list of Go related videos from various authors
-
-Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a list of more resources to learn Go`,
-	}
-
-	params := slack.PostMessageParameters{AsUser: true}
-	params.Attachments = []slack.Attachment{newbieResources}
-	_, _, err := slackAPI.PostMessage(event.Channel, "Here are some resources you might want to check if you are new to Go:", params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func suggestPlayground(event *slack.MessageEvent) {
-	if event.File == nil {
-		return
-	}
-
-	info, _, _, err := slackAPI.GetFileInfo(event.File.ID, 0, 0)
-	if err != nil {
-		log.Printf("error while getting file info: %v", err)
-		return
-	}
-
-	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
-	req.Header.Add("User-Agent", "Gophers Slack bot")
-	req.Header.Add("Authorization", "Bearer "+slackToken)
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Printf("error while fetching the file %v\n", err)
-		return
-	}
-
-	file, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		log.Printf("error while reading the file %v\n", err)
-		return
-	}
-
-	requestBody := bytes.NewBuffer(file)
-
-	req, err = http.NewRequest("POST", "https://play.golang.org/share", requestBody)
-	if err != nil {
-		log.Printf("failed to get playground link: %v", err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-	req.Header.Add("User-Agent", "Gophers Slack bot")
-	req.Header.Add("Content-Length", strconv.Itoa(len(file)))
-
-	resp, err = httpClient.Do(req)
-	if err != nil {
-		log.Printf("failed to get playground link: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		log.Printf("got non-200 response: %v", resp.StatusCode)
-		return
-	}
-
-	linkID, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("failed to get playground link: %v", err)
-		return
-	}
-
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = slackAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-
-	_, _, err = slackAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. Thank you.`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func ossHelp(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func goForks(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func goBlockForever(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func goDatabaseTutorial(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func gophersNotGuys(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.User, `Hi please use gophers or folks not guys. Thank you :)`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func dealWithHTTPTimeouts(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func tableUnflip(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func searchLibrary(event *slack.MessageEvent) {
-	searchTerm := strings.ToLower(event.Text)
-	if idx := strings.Index(searchTerm, "library for"); idx != -1 {
-		searchTerm = event.Text[idx+11:]
-	} else if idx := strings.Index(searchTerm, "library in go for"); idx != -1 {
-		searchTerm = event.Text[idx+17:]
-	} else if idx := strings.Index(searchTerm, "go library for"); idx != -1 {
-		searchTerm = event.Text[idx+14:]
-	}
-
-	searchTerm = slackLinkRE.ReplaceAllString(searchTerm, "")
-	searchTerm = emojiRE.ReplaceAllString(searchTerm, "")
-
-	if idx := strings.Index(searchTerm, "in go"); idx != -1 {
-		searchTerm = searchTerm[:idx] + searchTerm[idx+5:]
-	}
-
-	searchTerm = strings.Trim(searchTerm, "?;., ")
-	if len(searchTerm) == 0 || len(searchTerm) > 100 {
-		return
-	}
-	searchTerm = url.QueryEscape(searchTerm)
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func xkcd(event *slack.MessageEvent, imageLink string) {
-	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, imageLink, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func godoc(event *slack.MessageEvent, prefix string, position int) {
-	link := event.Text[position:]
-	if strings.Contains(link, " ") {
-		link = link[:strings.Index(link, " ")]
-	}
-
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func reactToEvent(event *slack.MessageEvent, reaction string) {
-	item := slack.ItemRef{
-		Channel:   event.Channel,
-		Timestamp: event.Timestamp,
-	}
-	err := slackAPI.AddReaction(reaction, item)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func replyVersion(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", botVersion), params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func replyBotLocation(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := slackAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
-	}
-}
-
-func replyFlipCoin(event *slack.MessageEvent) {
-	buff := make([]byte, 1, 1)
-	_, err := rand.Read(buff)
-	if err != nil {
-		log.Printf("%s\n", err)
-	}
-	result := "heads"
-	if buff[0]%2 == 0 {
-		result = "tail"
-	}
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = slackAPI.PostMessage(event.Channel, fmt.Sprintf("%s", result), params)
-	if err != nil {
-		log.Printf("%s\n", err)
-		return
 	}
 }
