@@ -152,7 +152,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.Contains(eventText, "newbie resources") {
-		b.NewbieResources(event)
+		b.NewbieResources(event, false)
 		return
 	}
 
@@ -258,8 +258,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 		if strings.Contains(eventText, "thank") ||
 			strings.Contains(eventText, "cheers") ||
-			strings.Contains(eventText, "hello") ||
-			strings.Contains(eventText, "hi") {
+			strings.Contains(eventText, "hello") {
 			b.ReactToEvent(event, "gopher")
 			return
 		}
@@ -285,11 +284,17 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 			b.ReplyVersion(event)
 			return
 		}
+
+		if strings.Contains(eventText, "newbie resources") {
+			b.NewbieResources(event, true)
+			return
+		}
+
 		return
 	}
 }
 
-func (b *Bot) NewbieResources(event *slack.MessageEvent) {
+func (b *Bot) NewbieResources(event *slack.MessageEvent, private bool) {
 	newbieResources := slack.Attachment{
 		Text: `First you should take the language tour: <http://tour.golang.org/>
 
@@ -319,7 +324,11 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 
 	params := slack.PostMessageParameters{AsUser: true}
 	params.Attachments = []slack.Attachment{newbieResources}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, "Here are some resources you should check out if you are learning / new to Go:", params)
+	whereTo := event.Channel
+	if private {
+		whereTo = event.User
+	}
+	_, _, err := b.slackAPI.PostMessage(whereTo, "Here are some resources you should check out if you are learning / new to Go:", params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
