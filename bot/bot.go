@@ -151,7 +151,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		b.log("got message: %s\n", eventText)
 	}
 
-	if strings.Contains(eventText, "newbie resources") {
+	if strings.Contains(eventText, "newbie resources") &&
+		!(strings.Contains(eventText, strings.ToLower("@"+b.name)) || strings.Contains(eventText, strings.ToLower(b.id))) {
 		b.NewbieResources(event, false)
 		return
 	}
