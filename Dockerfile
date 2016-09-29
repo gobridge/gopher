@@ -1,7 +1,6 @@
 FROM alpine:3.4
 MAINTAINER Florin Patan "florinpatan@gmail.com"
 
-EXPOSE 8080
 WORKDIR /
 
 # DNS stuff

@@ -36,6 +36,8 @@ import (
 	"github.com/nlopes/slack"
 )
 
+const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&n=100"
+
 var botVersion = "HEAD"
 
 func main() {
@@ -76,7 +78,7 @@ func main() {
 	go rtm.ManageConnection()
 	runtime.Gosched()
 
-	b := bot.NewBot(slackAPI, httpClient, botName, slackToken, botVersion, devMode, log.Printf)
+	b := bot.NewBot(slackAPI, httpClient, gerritLink, botName, slackToken, botVersion, devMode, log.Printf)
 	if err := b.Init(rtm); err != nil {
 		panic(err)
 	}

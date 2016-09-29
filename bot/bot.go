@@ -19,6 +19,7 @@ type (
 	slackChan struct {
 		description string
 		slackID     string
+		special     bool
 	}
 
 	botReply func(event *slack.MessageEvent) []string
@@ -39,6 +40,7 @@ type (
 
 	Bot struct {
 		id             string
+		gerritLink     string
 		name           string
 		token          string
 		version        string
@@ -95,6 +97,10 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = b.slackAPI.PostMessage(b.dlsniperUserID, fmt.Sprintf(`Deployed version: %s`, b.version), params)
+
+	if err == nil {
+		go b.MonitorGerrit()
+	}
 	return err
 }
 
@@ -118,6 +124,9 @@ Here's a list of a few channels you could join:
 `
 
 	for idx, val := range b.channels {
+		if val.special {
+			continue
+		}
 		message += `<` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
 	}
 
@@ -583,15 +592,16 @@ func (b *Bot) PackageLayout(event *slack.MessageEvent) {
 	}
 }
 
-func NewBot(slackAPI *slack.Client, httpClient Client, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(slackAPI *slack.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
-		name:     name,
-		token:    token,
-		client:   httpClient,
-		version:  version,
-		devMode:  devMode,
-		log:      log,
-		slackAPI: slackAPI,
+		gerritLink: gerritLink,
+		name:       name,
+		token:      token,
+		client:     httpClient,
+		version:    version,
+		devMode:    devMode,
+		log:        log,
+		slackAPI:   slackAPI,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
@@ -601,6 +611,7 @@ func NewBot(slackAPI *slack.Client, httpClient Client, name, token, version stri
 			"reviews":        {description: "for code reviews"},
 			"showandtell":    {description: "tell the world about the thing you are working on"},
 			"golang-jobs":    {description: "for jobs related to Go"},
+			"golang_cls":     {description: "https://twitter.com/golang_cls", special: true},
 			// TODO add more channels to share with the newbies?
 		},
 	}
