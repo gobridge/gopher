@@ -28,9 +28,9 @@ func (b *Bot) MonitorGerrit() {
 	lastID := ""
 
 	historyParams := slack.HistoryParameters{Count: 100}
-	history, err := b.slackAPI.GetChannelHistory(b.channels["golang_cls"], historyParams)
+	history, err := b.slackAPI.GetChannelHistory(b.channels["golang_cls"].slackID, historyParams)
 	if err != nil {
-		b.log(err)
+		b.log("error while fetching history: %v\n", err)
 	} else {
 		for _, msg := range history.Messages {
 			if msg.BotID != b.id {
@@ -46,7 +46,7 @@ func (b *Bot) MonitorGerrit() {
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	for <-tk.C {
+	for range tk.C {
 		req, err := http.NewRequest("GET", b.gerritLink, nil)
 		req.Header.Add("User-Agent", "Gophers Slack bot")
 		resp, err := b.client.Do(req)
