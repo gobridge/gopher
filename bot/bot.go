@@ -80,8 +80,8 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 		return errors.New("could not find bot in the list of names, check if the bot is called \"" + b.name + "\" ")
 	}
 
-	b.log("Determining channels ID")
-	publicChannels, err := b.slackAPI.GetChannels(false)
+	b.log("Determining channels ID\n")
+	publicChannels, err := b.slackAPI.GetChannels(true)
 	if err != nil {
 		return err
 	}
@@ -90,6 +90,15 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 		if chn, ok := b.channels[channel.Name]; ok {
 			chn.slackID = "#" + channel.ID
 			b.channels[channel.Name] = chn
+		}
+	}
+
+	b.log("Determining groups ID\n")
+	botGroups, err := b.slackAPI.GetGroups(true)
+	for _, group := range botGroups {
+		if chn, ok := b.channels[group.Name]; ok && b.channels[group.Name].slackID == "" {
+			chn.slackID = "#" + group.Name
+			b.channels[group.Name] = chn
 		}
 	}
 
