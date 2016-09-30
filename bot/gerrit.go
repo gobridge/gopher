@@ -28,7 +28,7 @@ func (b *Bot) MonitorGerrit() {
 	lastID := ""
 
 	historyParams := slack.HistoryParameters{Count: 100}
-	history, err := b.slackAPI.GetChannelHistory(b.channels["golang_cls"].slackID, historyParams)
+	history, err := b.slackAPI.GetGroupHistory(b.channels["golang_cls"].slackID[1:], historyParams)
 	if err != nil {
 		b.log("error while fetching history: %v\n", err)
 	} else {

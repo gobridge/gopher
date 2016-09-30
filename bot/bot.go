@@ -97,7 +97,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	botGroups, err := b.slackAPI.GetGroups(true)
 	for _, group := range botGroups {
 		if chn, ok := b.channels[group.Name]; ok && b.channels[group.Name].slackID == "" {
-			chn.slackID = "#" + group.Name
+			chn.slackID = group.ID
 			b.channels[group.Name] = chn
 		}
 	}
@@ -167,6 +167,19 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	if b.devMode {
 		b.log("got message: %s\n", eventText)
+	}
+
+	if strings.Contains(eventText, "has joined the channel") {
+		info, err := b.slackAPI.GetChannelInfo(b.channels["general"].slackID[1:])
+		if err == nil {
+			if info.NumMembers == 10000 {
+				b.ReactToEvent(event, "tada")
+				b.ReactToEvent(event, "balloon")
+				b.ReactToEvent(event, "gopher")
+				b.TenKGophers(event)
+			}
+		}
+		return
 	}
 
 	if strings.Contains(eventText, "newbie resources") &&
@@ -437,6 +450,15 @@ func (b *Bot) OSSHelp(event *slack.MessageEvent) {
 	}
 }
 
+func (b *Bot) TenKGophers(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := b.slackAPI.PostMessage(event.Channel, `10000 Gophers!!!`, params)
+	if err != nil {
+		b.log("%s\n", err)
+		return
+	}
+}
+
 func (b *Bot) GoForks(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
@@ -620,6 +642,8 @@ func NewBot(slackAPI *slack.Client, httpClient Client, gerritLink, name, token, 
 			"reviews":        {description: "for code reviews"},
 			"showandtell":    {description: "tell the world about the thing you are working on"},
 			"golang-jobs":    {description: "for jobs related to Go"},
+
+			"general": {description: "general channel", special:true},
 			"golang_cls":     {description: "https://twitter.com/golang_cls", special: true},
 			// TODO add more channels to share with the newbies?
 		},

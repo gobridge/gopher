@@ -36,11 +36,13 @@ import (
 	"github.com/nlopes/slack"
 )
 
-const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&n=100"
+const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&n=1"
 
 var botVersion = "HEAD"
 
 func main() {
+	log.SetFlags(log.LstdFlags|log.Lshortfile)
+
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
 	slackToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
 	devMode := os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE") == "true"
