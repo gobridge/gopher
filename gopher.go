@@ -36,29 +36,30 @@ import (
 	"github.com/nlopes/slack"
 )
 
-const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&n=1"
+const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
 
 var botVersion = "HEAD"
 
 func main() {
-	log.SetFlags(log.LstdFlags|log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
-	slackToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
+	slackBotToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
+
 	devMode := os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE") == "true"
 
-	if slackToken == "" {
-		log.Fatal("slack token must be set in the GOPHERS_SLACK_BOT_TOKEN environment variable")
+	if slackBotToken == "" {
+		log.Fatal("slack bot token must be set in GOPHERS_SLACK_BOT_TOKEN")
 	}
 
 	if botName == "" {
 		if devMode {
-			log.Fatal("bot name missing, set it with GOPHERS_SLACK_BOT_NAME")
+			log.Fatal("bot name must be set in GOPHERS_SLACK_BOT_NAME")
 		}
 		botName = "tempbot"
 	}
 
-	slackAPI := slack.New(slackToken)
+	slackBotAPI := slack.New(slackBotToken)
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{
@@ -76,18 +77,25 @@ func main() {
 		botName = botName[1:]
 	}
 
-	rtm := slackAPI.NewRTM()
-	go rtm.ManageConnection()
+	slackBotRTM := slackBotAPI.NewRTM()
+	slackAppRTM := slackBotAPI.NewRTM()
+	go slackBotRTM.ManageConnection()
+	go slackAppRTM.ManageConnection()
 	runtime.Gosched()
 
-	b := bot.NewBot(slackAPI, httpClient, gerritLink, botName, slackToken, botVersion, devMode, log.Printf)
-	if err := b.Init(rtm); err != nil {
+	b := bot.NewBot(slackBotAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	if err := b.Init(slackBotRTM); err != nil {
 		panic(err)
 	}
 
+	go func() {
+		<-time.After(1 * time.Second)
+		b.MonitorGerrit(30 * time.Minute)
+	}()
+
 	for {
 		select {
-		case msg := <-rtm.IncomingEvents:
+		case msg := <-slackBotRTM.IncomingEvents:
 			switch message := msg.Data.(type) {
 			case *slack.MessageEvent:
 				go b.HandleMessage(message)
@@ -95,6 +103,7 @@ func main() {
 			case *slack.TeamJoinEvent:
 				go b.TeamJoined(message)
 			default:
+				_ = message
 			}
 		}
 	}

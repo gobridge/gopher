@@ -39,41 +39,43 @@ type (
 	Logger func(message string, args ...interface{})
 
 	Bot struct {
-		id             string
-		gerritLink     string
-		name           string
-		token          string
-		version        string
-		dlsniperUserID string
-		client         Client
-		devMode        bool
-		emojiRE        *regexp.Regexp
-		slackLinkRE    *regexp.Regexp
-		channels       map[string]slackChan
-		slackAPI       *slack.Client
-
-		log Logger
+		id          string
+		gerritLink  string
+		name        string
+		token       string
+		version     string
+		users       map[string]string
+		client      Client
+		devMode     bool
+		emojiRE     *regexp.Regexp
+		slackLinkRE *regexp.Regexp
+		channels    map[string]slackChan
+		slackBotAPI *slack.Client
+		log         Logger
 	}
 )
 
 func (b *Bot) Init(rtm *slack.RTM) error {
-	b.log("Determining bot / dlsniper user ID")
-	users, err := b.slackAPI.GetUsers()
+	b.log("Determining bot / user IDs")
+	users, err := b.slackBotAPI.GetUsers()
 	if err != nil {
 		return err
 	}
 
-	for _, user := range users {
-		if !user.IsBot {
-			if user.Name == "dlsniper" {
-				b.dlsniperUserID = user.ID
-			}
-			continue
-		}
+	b.users = map[string]string{}
 
-		if user.Name == b.name {
-			b.id = user.ID
-			break
+	for _, user := range users {
+		switch user.Name {
+		case "dlsniper":
+			b.users["dlsniper"] = user.ID
+		case "dominikh":
+			b.users["dominikh"] = user.ID
+		case b.name:
+			if user.IsBot {
+				b.id = user.ID
+			}
+		default:
+			continue
 		}
 	}
 	if b.id == "" {
@@ -81,7 +83,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	}
 
 	b.log("Determining channels ID\n")
-	publicChannels, err := b.slackAPI.GetChannels(true)
+	publicChannels, err := b.slackBotAPI.GetChannels(true)
 	if err != nil {
 		return err
 	}
@@ -94,7 +96,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	}
 
 	b.log("Determining groups ID\n")
-	botGroups, err := b.slackAPI.GetGroups(true)
+	botGroups, err := b.slackBotAPI.GetGroups(true)
 	for _, group := range botGroups {
 		if chn, ok := b.channels[group.Name]; ok && b.channels[group.Name].slackID == "" {
 			chn.slackID = group.ID
@@ -105,11 +107,8 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	b.log("Initialized %s with ID: %s\n", b.name, b.id)
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackAPI.PostMessage(b.dlsniperUserID, fmt.Sprintf(`Deployed version: %s`, b.version), params)
+	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
 
-	if err == nil {
-		go b.MonitorGerrit()
-	}
 	return err
 }
 
@@ -151,11 +150,32 @@ Final thing, #general might be too chatty at times but don't be shy to ask your 
 Now enjoy your stay and have fun.`
 
 	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
-	_, _, err := b.slackAPI.PostMessage(event.User.ID, message, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.User.ID, message, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
 	}
+}
+
+func (b *Bot) isBotMessage(eventText string) bool {
+	return strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">"))
+}
+
+
+func (b *Bot) trimBot(msg string) string {
+	msg = strings.Replace(msg, strings.ToLower("<@"+b.id+">"), "", 1)
+	msg = strings.Trim(msg, " \n")
+	return msg
+}
+
+// limit access to certain functionality
+func (b *Bot) specialRestrictions(restriction, eventText string, event *slack.MessageEvent) bool {
+	if restriction == "golang_cls" {
+		return event.Channel == b.channels["golang_cls"].slackID &&
+			(event.User == b.users["dlsniper"] || event.User == b.users["dominikh"])
+	}
+
+	return false
 }
 
 func (b *Bot) HandleMessage(event *slack.MessageEvent) {
@@ -169,17 +189,14 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		b.log("got message: %s\n", eventText)
 	}
 
-	if strings.Contains(eventText, "has joined the channel") {
-		info, err := b.slackAPI.GetChannelInfo(b.channels["general"].slackID[1:])
-		if err == nil {
-			if info.NumMembers == 10000 {
-				b.ReactToEvent(event, "tada")
-				b.ReactToEvent(event, "balloon")
-				b.ReactToEvent(event, "gopher")
-				b.TenKGophers(event)
+	if b.isBotMessage(eventText) {
+		eventText := b.trimBot(eventText)
+		b.log("message: %q\n", eventText)
+		if strings.HasPrefix(eventText, "share cl") {
+			if b.specialRestrictions("golang_cls", eventText, event) {
+				// TODO share stuff on Twitter
 			}
 		}
-		return
 	}
 
 	if strings.Contains(eventText, "newbie resources") &&
@@ -275,7 +292,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, strings.ToLower("@"+b.name)) || strings.Contains(eventText, strings.ToLower(b.id)) {
+	if b.isBotMessage(event.Text) {
 		if strings.Contains(eventText, "package layout") {
 			b.PackageLayout(event)
 			return
@@ -360,7 +377,7 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 	if private {
 		whereTo = event.User
 	}
-	_, _, err := b.slackAPI.PostMessage(whereTo, "Here are some resources you should check out if you are learning / new to Go:", params)
+	_, _, err := b.slackBotAPI.PostMessage(whereTo, "Here are some resources you should check out if you are learning / new to Go:", params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -372,7 +389,7 @@ func (b *Bot) SuggestPlayground(event *slack.MessageEvent) {
 		return
 	}
 
-	info, _, _, err := b.slackAPI.GetFileInfo(event.File.ID, 0, 0)
+	info, _, _, err := b.slackBotAPI.GetFileInfo(event.File.ID, 0, 0)
 	if err != nil {
 		b.log("error while getting file info: %v", err)
 		return
@@ -428,13 +445,13 @@ func (b *Bot) SuggestPlayground(event *slack.MessageEvent) {
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	_, _, err = b.slackBotAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
 	}
 
-	_, _, err = b.slackAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. Thank you.`, params)
+	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. Thank you.`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -443,7 +460,7 @@ func (b *Bot) SuggestPlayground(event *slack.MessageEvent) {
 
 func (b *Bot) OSSHelp(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -452,7 +469,7 @@ func (b *Bot) OSSHelp(event *slack.MessageEvent) {
 
 func (b *Bot) TenKGophers(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `10000 Gophers!!!`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `10000 Gophers!!!`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -461,7 +478,7 @@ func (b *Bot) TenKGophers(event *slack.MessageEvent) {
 
 func (b *Bot) GoForks(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -470,7 +487,7 @@ func (b *Bot) GoForks(event *slack.MessageEvent) {
 
 func (b *Bot) GoBlockForever(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -479,7 +496,7 @@ func (b *Bot) GoBlockForever(event *slack.MessageEvent) {
 
 func (b *Bot) GoDatabaseTutorial(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -488,7 +505,7 @@ func (b *Bot) GoDatabaseTutorial(event *slack.MessageEvent) {
 
 func (b *Bot) GophersNotGuys(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.User, `Hi please use gophers or folks not guys. Thank you :)`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.User, `Hi please use gophers or folks not guys. Thank you :)`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -497,7 +514,7 @@ func (b *Bot) GophersNotGuys(event *slack.MessageEvent) {
 
 func (b *Bot) DealWithHTTPTimeouts(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -506,7 +523,7 @@ func (b *Bot) DealWithHTTPTimeouts(event *slack.MessageEvent) {
 
 func (b *Bot) TableUnflip(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -536,7 +553,7 @@ func (b *Bot) SearchLibrary(event *slack.MessageEvent) {
 	}
 	searchTerm = url.QueryEscape(searchTerm)
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -545,7 +562,7 @@ func (b *Bot) SearchLibrary(event *slack.MessageEvent) {
 
 func (b *Bot) XKCD(event *slack.MessageEvent, imageLink string) {
 	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, imageLink, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -559,7 +576,7 @@ func (b *Bot) Godoc(event *slack.MessageEvent, prefix string, position int) {
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -571,7 +588,7 @@ func (b *Bot) ReactToEvent(event *slack.MessageEvent, reaction string) {
 		Channel:   event.Channel,
 		Timestamp: event.Timestamp,
 	}
-	err := b.slackAPI.AddReaction(reaction, item)
+	err := b.slackBotAPI.AddReaction(reaction, item)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -580,7 +597,7 @@ func (b *Bot) ReactToEvent(event *slack.MessageEvent, reaction string) {
 
 func (b *Bot) ReplyVersion(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", b.version), params)
+	_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", b.version), params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -589,7 +606,7 @@ func (b *Bot) ReplyVersion(event *slack.MessageEvent) {
 
 func (b *Bot) ReplyBotLocation(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -607,7 +624,7 @@ func (b *Bot) ReplyFlipCoin(event *slack.MessageEvent) {
 		result = "tail"
 	}
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackAPI.PostMessage(event.Channel, fmt.Sprintf("%s", result), params)
+	_, _, err = b.slackBotAPI.PostMessage(event.Channel, fmt.Sprintf("%s", result), params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -616,23 +633,23 @@ func (b *Bot) ReplyFlipCoin(event *slack.MessageEvent) {
 
 func (b *Bot) PackageLayout(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackAPI.PostMessage(event.Channel, "This article will explain how to organize your Go packages <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>", params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "This article will explain how to organize your Go packages <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>", params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
 	}
 }
 
-func NewBot(slackAPI *slack.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
-		gerritLink: gerritLink,
-		name:       name,
-		token:      token,
-		client:     httpClient,
-		version:    version,
-		devMode:    devMode,
-		log:        log,
-		slackAPI:   slackAPI,
+		gerritLink:  gerritLink,
+		name:        name,
+		token:       token,
+		client:      httpClient,
+		version:     version,
+		devMode:     devMode,
+		log:         log,
+		slackBotAPI: slackBotAPI,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
@@ -643,8 +660,8 @@ func NewBot(slackAPI *slack.Client, httpClient Client, gerritLink, name, token, 
 			"showandtell":    {description: "tell the world about the thing you are working on"},
 			"golang-jobs":    {description: "for jobs related to Go"},
 
-			"general": {description: "general channel", special:true},
-			"golang_cls":     {description: "https://twitter.com/golang_cls", special: true},
+			"general":    {description: "general channel", special: true},
+			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
 			// TODO add more channels to share with the newbies?
 		},
 	}
