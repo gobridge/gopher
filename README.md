@@ -34,7 +34,7 @@ kubectl create namespace gopher-slack-bot
 cp secrets.yaml.template secrets.yaml
 echo `echo -n 'slackTokenHere' | base64` >> secrets.yaml
 kubectl create -f ./secrets.yaml --namespace=gopher-slack-bot
-kubectl create -f ./rc.yaml --namespace=gopher-slack-bot
+kubectl create -f ./deployment.yaml --namespace=gopher-slack-bot
 ```
 
 ## License

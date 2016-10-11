@@ -1,0 +1,47 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: gopher-slack-bot
+  namespace: gopher-slack-bot
+  labels:
+    app: gopher-slack-bot
+    version: b4b1bffa10681715be1cf87652429757a9908199
+  annotations:
+    description: Gopher Slack Bot
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      name: gopher-slack-bot
+      labels:
+        app: gopher-slack-bot
+      annotations:
+        description: Gopher Slack Bot
+    spec:
+      containers:
+      - name: gopher-slack-bot
+        image: eu.gcr.io/gopher-slack-bot/bot:b4b1bffa10681715be1cf87652429757a9908199
+        resources:
+          requests:
+            cpu: 400m
+            memory: 150Mi
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: false
+        env:
+          - name: GOPHERS_SLACK_BOT_NAME
+            valueFrom:
+              secretKeyRef:
+                name: gophersecret
+                key: botname
+          - name: GOPHERS_SLACK_BOT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: gophersecret
+                key: token
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
