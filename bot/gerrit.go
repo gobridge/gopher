@@ -103,7 +103,6 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 			cl := cls[idx]
 			lastID = strings.ToLower(cl.ID)
 			msg := slack.Attachment{
-				Fallback:  fmt.Sprintf("%d - %s - %s", cl.Number, cl.Subject, clLink(cl.Number)),
 				Title:     cl.Subject,
 				TitleLink: clLink(cl.Number),
 				Text:      cl.Revisions[cl.CurrentRevision].Commit.Message,

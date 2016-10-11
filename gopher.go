@@ -78,9 +78,7 @@ func main() {
 	}
 
 	slackBotRTM := slackBotAPI.NewRTM()
-	slackAppRTM := slackBotAPI.NewRTM()
 	go slackBotRTM.ManageConnection()
-	go slackAppRTM.ManageConnection()
 	runtime.Gosched()
 
 	b := bot.NewBot(slackBotAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
