@@ -110,7 +110,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 			}
 			params := slack.PostMessageParameters{AsUser: true}
 			params.Attachments = append(params.Attachments, msg)
-			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, msg.Fallback, params)
+			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%d - %s - %s", cl.Number, cl.Subject, clLink(cl.Number)), params)
 			if err != nil {
 				b.log("%s\n", err)
 				continue
