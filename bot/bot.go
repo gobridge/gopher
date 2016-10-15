@@ -121,8 +121,6 @@ Welcome to the Gophers Slack channel.
 This Slack is meant to connect gophers from all over the world in a central place.
 
 We have a few rules that you can see here: http://coc.golangbridge.org.
-One of the rules is that we ask you to have a full name, the name people know you as, regardless of whether that corresponds with your ID or not.
-so that other gophers can recognize you easier.
 
 There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
 
@@ -147,7 +145,7 @@ To share code, you should use: https://play.golang.org/ as it makes it easy for 
 Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
 
 
-Now enjoy your stay and have fun.`
+Now, enjoy your stay and have fun.`
 
 	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
 	_, _, err := b.slackBotAPI.PostMessage(event.User.ID, message, params)
@@ -231,13 +229,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	if strings.Contains(eventText, "block forever in go") {
 		b.GoBlockForever(event)
-		return
-	}
-
-	if strings.HasPrefix(eventText, "hi guys") ||
-		strings.HasPrefix(eventText, "hey guys") ||
-		strings.HasPrefix(event.Text, "hello guys") {
-		b.GophersNotGuys(event)
 		return
 	}
 
@@ -497,15 +488,6 @@ func (b *Bot) GoBlockForever(event *slack.MessageEvent) {
 func (b *Bot) GoDatabaseTutorial(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
-	if err != nil {
-		b.log("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) GophersNotGuys(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.User, `Hi please use gophers or folks not guys. Thank you :)`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
