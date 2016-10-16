@@ -86,10 +86,10 @@ func main() {
 		panic(err)
 	}
 
-	/*go func() {
+	go func() {
 		<-time.After(1 * time.Second)
 		b.MonitorGerrit(30 * time.Minute)
-	}()*/
+	}()
 
 	for {
 		select {

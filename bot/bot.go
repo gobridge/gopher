@@ -90,22 +90,24 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	}
 
 	for _, channel := range publicChannels {
-		if chn, ok := b.channels[channel.Name]; ok {
+		channelName := strings.ToLower(channel.Name)
+		if chn, ok := b.channels[channelName]; ok {
 			chn.slackID = "#" + channel.ID
-			b.channels[channel.Name] = chn
+			b.channels[channelName] = chn
 		}
 	}
 
 	b.log("Determining groups ID\n")
 	botGroups, err := b.slackBotAPI.GetGroups(true)
 	for _, group := range botGroups {
-		if chn, ok := b.channels[group.Name]; ok && b.channels[group.Name].slackID == "" {
+		groupName := strings.ToLower(group.Name)
+		if chn, ok := b.channels[groupName]; ok && b.channels[groupName].slackID == "" {
 			chn.slackID = group.ID
-			b.channels[group.Name] = chn
+			b.channels[groupName] = chn
 		}
 	}
 
-	b.log("Initialized %s with ID: %s\n", b.name, b.id)
+	b.log("Initialized %s with ID: %s and channel ID: %s\n", b.name, b.id, b.channels["gopher"].slackID)
 
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
@@ -155,8 +157,9 @@ Now, enjoy the community and have fun.`
 	}
 }
 
-func (b *Bot) isBotMessage(eventText string) bool {
-	return strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">"))
+func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
+	return strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">")) ||
+		event.Channel == b.channels["gopher"].slackID
 }
 
 func (b *Bot) trimBot(msg string) string {
@@ -183,7 +186,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	eventText := strings.ToLower(event.Text)
 
 	if b.devMode {
-		b.log("got message: %s\nisBotMessage: %t\n", eventText, b.isBotMessage(eventText))
+		b.log("%#v\n", *event)
+		b.log("got message: %s\nisBotMessage: %t\n", eventText, b.isBotMessage(event, eventText))
 
 		eventText := b.trimBot(eventText)
 		b.log("channel: %s -> message: %q\n", event.Channel, eventText)
@@ -230,7 +234,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if !b.isBotMessage(eventText) {
+	if !b.isBotMessage(event, eventText) {
 		return
 	}
 
@@ -705,7 +709,9 @@ func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, toke
 
 			"general":    {description: "general channel", special: true},
 			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
-			// TODO add more channels to share with the newbies?
+
+			// Do NOT touch the ID on this one
+			"gopher":     {description: "direct message channel with Gopher", special: true, slackID: "D258JJQ13"},
 		},
 	}
 }
