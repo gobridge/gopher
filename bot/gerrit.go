@@ -14,7 +14,8 @@ import (
 
 type (
 	sentCL struct {
-		ID              string `json:"change_id"`
+		Project         string `json:"project"`
+		ChangeID        string `json:"change_id"`
 		Number          int    `json:"_number"`
 		Subject         string `json:"subject"`
 		Branch          string `json:"branch"`
@@ -93,7 +94,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 		foundIdx := len(cls) - 1
 		for idx := len(cls) - 1; idx >= 0; idx-- {
-			if strings.ToLower(cls[idx].ID) == lastID {
+			if strings.ToLower(cls[idx].ChangeID) == lastID {
 				foundIdx = idx
 				break
 			}
@@ -101,16 +102,23 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 		for idx := foundIdx - 1; idx >= 0; idx-- {
 			cl := cls[idx]
-			lastID = strings.ToLower(cl.ID)
+			if cl.Branch != "master" {
+				continue
+			}
+			lastID = strings.ToLower(cl.ChangeID)
 			msg := slack.Attachment{
 				Title:     cl.Subject,
 				TitleLink: clLink(cl.Number),
 				Text:      cl.Revisions[cl.CurrentRevision].Commit.Message,
-				Footer:    cl.ID,
+				Footer:    cl.ChangeID,
 			}
 			params := slack.PostMessageParameters{AsUser: true}
 			params.Attachments = append(params.Attachments, msg)
-			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%d - %s - %s", cl.Number, cl.Subject, clLink(cl.Number)), params)
+			subject := cl.Subject
+			if cl.Project != "go" {
+				subject = fmt.Sprintf("[%s] %s", cl.Project, subject)
+			}
+			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
 			if err != nil {
 				b.log("%s\n", err)
 				continue
