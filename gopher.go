@@ -86,10 +86,10 @@ func main() {
 		panic(err)
 	}
 
-	go func() {
+	/*go func() {
 		<-time.After(1 * time.Second)
 		b.MonitorGerrit(30 * time.Minute)
-	}()
+	}()*/
 
 	for {
 		select {
@@ -99,7 +99,7 @@ func main() {
 				go b.HandleMessage(message)
 
 			case *slack.TeamJoinEvent:
-				go b.TeamJoined(message)
+				//go b.TeamJoined(message)
 			default:
 				_ = message
 			}

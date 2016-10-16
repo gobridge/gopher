@@ -19,6 +19,7 @@ type (
 	slackChan struct {
 		description string
 		slackID     string
+		welcome     bool
 		special     bool
 	}
 
@@ -117,35 +118,34 @@ func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 
 
 Welcome to the Gophers Slack channel.
-
 This Slack is meant to connect gophers from all over the world in a central place.
-
-We have a few rules that you can see here: http://coc.golangbridge.org.
-
 There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
-
-If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
+We have a few rules that you can see here: http://coc.golangbridge.org.
 
 Here's a list of a few channels you could join:
 `
 
 	for idx, val := range b.channels {
-		if val.special {
+		if !val.welcome {
 			continue
 		}
 		message += `<` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
 	}
 
 	message += `
+
+If you want more suggestions, type "recommended channels".
 There are quite a few other channels, depending on your interests or location (we have city / country wide channels).
 Just click on the channel list and search for anything that crosses your mind.
 
 To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
+If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
+
 Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
 
 
-Now, enjoy your stay and have fun.`
+Now, enjoy the community and have fun.`
 
 	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
 	_, _, err := b.slackBotAPI.PostMessage(event.User.ID, message, params)
@@ -158,7 +158,6 @@ Now, enjoy your stay and have fun.`
 func (b *Bot) isBotMessage(eventText string) bool {
 	return strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">"))
 }
-
 
 func (b *Bot) trimBot(msg string) string {
 	msg = strings.Replace(msg, strings.ToLower("<@"+b.id+">"), "", 1)
@@ -184,51 +183,16 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	eventText := strings.ToLower(event.Text)
 
 	if b.devMode {
-		b.log("got message: %s\n", eventText)
-	}
+		b.log("got message: %s\nisBotMessage: %t\n", eventText, b.isBotMessage(eventText))
 
-	if b.isBotMessage(eventText) {
 		eventText := b.trimBot(eventText)
-		b.log("message: %q\n", eventText)
-		if strings.HasPrefix(eventText, "share cl") {
-			if b.specialRestrictions("golang_cls", eventText, event) {
-				// TODO share stuff on Twitter
-			}
-		}
-	}
-
-	if strings.Contains(eventText, "newbie resources") &&
-		!(strings.Contains(eventText, strings.ToLower("@"+b.name)) || strings.Contains(eventText, strings.ToLower(b.id))) {
-		b.NewbieResources(event, false)
-		return
-	}
-
-	// TODO should we check for ``` or messages of a certain length?
-	if !strings.Contains(eventText, "nolink") &&
-		event.File != nil &&
-		(event.File.Filetype == "go" || event.File.Filetype == "text") {
-		b.SuggestPlayground(event)
+		b.log("channel: %s -> message: %q\n", event.Channel, eventText)
 		return
 	}
 
 	// All the variations of table flip seem to include this characters so... potato?
 	if strings.Contains(eventText, "︵") || strings.Contains(eventText, "彡") {
 		b.TableUnflip(event)
-		return
-	}
-
-	if strings.Contains(eventText, "oss help") {
-		b.OSSHelp(event)
-		return
-	}
-
-	if strings.Contains(eventText, "work with go forks") {
-		b.GoForks(event)
-		return
-	}
-
-	if strings.Contains(eventText, "block forever in go") {
-		b.GoBlockForever(event)
 		return
 	}
 
@@ -248,31 +212,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if strings.Contains(eventText, "blog about http timeouts") {
-		b.DealWithHTTPTimeouts(event)
-		return
-	}
-
-	if strings.Contains(eventText, "go database tutorial") {
-		b.GoDatabaseTutorial(event)
-		return
-	}
-
-	if strings.Contains(eventText, "xkcd:standards") {
-		b.XKCD(event, "https://xkcd.com/927/")
-		return
-	}
-
-	if strings.Contains(eventText, "xkcd:compiling") {
-		b.XKCD(event, "https://xkcd.com/303/")
-		return
-	}
-
-	if strings.Contains(eventText, "xkcd:optimization") {
-		b.XKCD(event, "https://xkcd.com/1691/")
-		return
-	}
-
 	if strings.HasPrefix(eventText, "ghd/") {
 		b.Godoc(event, "github.com/", 4)
 		return
@@ -283,53 +222,123 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if b.isBotMessage(event.Text) {
-		if strings.Contains(eventText, "package layout") {
-			b.PackageLayout(event)
-			return
-		}
+	// TODO should we check for ``` or messages of a certain length?
+	if !strings.Contains(eventText, "nolink") &&
+		event.File != nil &&
+		(event.File.Filetype == "go" || event.File.Filetype == "text") {
+		b.SuggestPlayground(event)
+		return
+	}
 
-		if strings.Contains(eventText, "library for") ||
-			strings.Contains(eventText, "library in go for") ||
-			strings.Contains(eventText, "go library for") {
-			b.SearchLibrary(event)
-			return
-		}
+	if !b.isBotMessage(eventText) {
+		return
+	}
 
-		if strings.Contains(eventText, "thank") ||
-			strings.Contains(eventText, "cheers") ||
-			strings.Contains(eventText, "hello") {
-			b.ReactToEvent(event, "gopher")
-			return
+	eventText = b.trimBot(eventText)
+	b.log("message: %q\n", eventText)
+	if strings.HasPrefix(eventText, "share cl") {
+		if b.specialRestrictions("golang_cls", eventText, event) {
+			// TODO share stuff on Twitter
 		}
+	}
 
-		if strings.Contains(eventText, "wave") {
-			b.ReactToEvent(event, "wave")
-			b.ReactToEvent(event, "gopher")
-			return
-		}
+	if eventText == "newbie resources" {
+		b.NewbieResources(event, false)
+		return
+	}
 
-		if strings.Contains(eventText, "flip coin") ||
-			strings.Contains(eventText, "flip a coin") {
-			b.ReplyFlipCoin(event)
-			return
-		}
+	if eventText == "newbie resources pvt" {
+		b.NewbieResources(event, true)
+		return
+	}
 
-		if strings.Contains(eventText, "where do you live?") {
-			b.ReplyBotLocation(event)
-			return
-		}
+	if eventText == "recommended channels" {
+		b.RecommendedChannels(event)
+		return
+	}
 
-		if strings.Contains(eventText, "version") {
-			b.ReplyVersion(event)
-			return
-		}
+	if eventText == "oss help" {
+		b.OSSHelp(event)
+		return
+	}
 
-		if strings.Contains(eventText, "newbie resources") {
-			b.NewbieResources(event, true)
-			return
-		}
+	if eventText == "work with forks" {
+		b.GoForks(event)
+		return
+	}
 
+	if eventText == "block forever" {
+		b.GoBlockForever(event)
+		return
+	}
+
+	if eventText == "http timeouts" {
+		b.DealWithHTTPTimeouts(event)
+		return
+	}
+
+	if eventText == "database tutorial" {
+		b.GoDatabaseTutorial(event)
+		return
+	}
+
+	if eventText == "xkcd:standards" {
+		b.XKCD(event, "https://xkcd.com/927/")
+		return
+	}
+
+	if eventText == "xkcd:compiling" {
+		b.XKCD(event, "https://xkcd.com/303/")
+		return
+	}
+
+	if eventText == "xkcd:optimization" {
+		b.XKCD(event, "https://xkcd.com/1691/")
+		return
+	}
+
+	if eventText == "package layout" {
+		b.PackageLayout(event)
+		return
+	}
+
+	if strings.HasPrefix(eventText, "library for") {
+		b.SearchLibrary(event)
+		return
+	}
+
+	if strings.Contains(eventText, "thank") ||
+		eventText == "cheers" ||
+		eventText == "hello" {
+		b.ReactToEvent(event, "gopher")
+		return
+	}
+
+	if eventText == "wave" {
+		b.ReactToEvent(event, "wave")
+		b.ReactToEvent(event, "gopher")
+		return
+	}
+
+	if eventText == "flip coin" ||
+		eventText == "flip a coin" {
+		b.ReplyFlipCoin(event)
+		return
+	}
+
+	if eventText == "where do you live?" ||
+		eventText == "stack" {
+		b.ReplyBotLocation(event)
+		return
+	}
+
+	if eventText == "version" {
+		b.ReplyVersion(event)
+		return
+	}
+
+	if eventText == "help" {
+		b.Help(event)
 		return
 	}
 }
@@ -369,6 +378,24 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 		whereTo = event.User
 	}
 	_, _, err := b.slackBotAPI.PostMessage(whereTo, "Here are some resources you should check out if you are learning / new to Go:", params)
+	if err != nil {
+		b.log("%s\n", err)
+		return
+	}
+}
+func (b *Bot) RecommendedChannels(event *slack.MessageEvent) {
+	message := slack.Attachment{}
+
+	for idx, val := range b.channels {
+		if val.special {
+			continue
+		}
+		message.Text += `- <` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
+	}
+
+	params := slack.PostMessageParameters{AsUser: true}
+	params.Attachments = []slack.Attachment{message}
+	_, _, err := b.slackBotAPI.PostMessage(event.User, "Here is a list of recommended channels:", params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -442,7 +469,7 @@ func (b *Bot) SuggestPlayground(event *slack.MessageEvent) {
 		return
 	}
 
-	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. Thank you.`, params)
+	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. If you wish to not link against the playground, please use "nolink" in the message. Thank you.`, params)
 	if err != nil {
 		b.log("%s\n", err)
 		return
@@ -586,6 +613,32 @@ func (b *Bot) ReplyVersion(event *slack.MessageEvent) {
 	}
 }
 
+func (b *Bot) Help(event *slack.MessageEvent) {
+	message := slack.Attachment{
+		Text: `- "newbie resources" -> get a list of newbie resources
+- "newbie resources pvt" -> get a list of newbie resources as a private message
+- "recommended channels" -> get a list of recommended channels
+- "oss help" -> help the open-source community
+- "work with forks" -> how to work with forks of packages
+- "block forever" -> how to block forever
+- "http timeouts" -> tutorial about dealing with timeouts and http
+- "database tutorial" -> tutorial about using sql databases
+- "package layout" -> learn how to structure your Go package
+- "library for <name>" -> search a go package that matches <name>
+- "flip a coin" -> flip a coin
+- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher
+`,
+	}
+
+	params := slack.PostMessageParameters{AsUser: true}
+	params.Attachments = []slack.Attachment{message}
+	_, _, err := b.slackBotAPI.PostMessage(event.User, "Here's a list of supported commands", params)
+	if err != nil {
+		b.log("%s\n", err)
+		return
+	}
+}
+
 func (b *Bot) ReplyBotLocation(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
@@ -637,10 +690,18 @@ func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, toke
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
 
 		channels: map[string]slackChan{
-			"golang-newbies": {description: "for newbie resources"},
-			"reviews":        {description: "for code reviews"},
-			"showandtell":    {description: "tell the world about the thing you are working on"},
-			"golang-jobs":    {description: "for jobs related to Go"},
+			"golang-newbies": {description: "for newbie resources", welcome: true},
+			"reviews":        {description: "for code reviews", welcome: true},
+			"gotimefm":       {description: "for the awesome live podcast", welcome: true},
+			"remotemeetup":   {description: "for remote meetup", welcome: true},
+			"golang-jobs":    {description: "for jobs related to Go", welcome: true},
+
+			"showandtell": {description: "tell the world about the thing you are working on"},
+			"performance": {description: "anything and everything performance related"},
+			"devops":      {description: "for devops related discussions"},
+			"security":    {description: "for security related discussions"},
+			"aws":         {description: "if you are interested in AWS"},
+			"bbq":         {description: "Go controlling your bbq grill? Yes, we have that"},
 
 			"general":    {description: "general channel", special: true},
 			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
