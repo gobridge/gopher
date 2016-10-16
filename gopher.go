@@ -99,7 +99,7 @@ func main() {
 				go b.HandleMessage(message)
 
 			case *slack.TeamJoinEvent:
-				//go b.TeamJoined(message)
+				go b.TeamJoined(message)
 			default:
 				_ = message
 			}
