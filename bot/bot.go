@@ -216,6 +216,12 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "beer me") {
+		b.ReactToEvent(event, "beer")
+		b.ReactToEvent(event, "beers")
+		return
+	}
+
 	if strings.HasPrefix(eventText, "ghd/") {
 		b.Godoc(event, "github.com/", 4)
 		return
