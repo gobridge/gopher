@@ -97,17 +97,22 @@ func main() {
 	}()
 
 	go func() {
-		for msg, ok := <-slackBotRTM.IncomingEvents; ok; {
-			switch message := msg.Data.(type) {
-			case *slack.MessageEvent:
-				go b.HandleMessage(message)
+		for {
+			select {
+			case msg := <-slackBotRTM.IncomingEvents:
+				switch message := msg.Data.(type) {
+				case *slack.MessageEvent:
+					go b.HandleMessage(message)
 
-			case *slack.TeamJoinEvent:
-				go b.TeamJoined(message)
-			default:
-				_ = message
+				case *slack.TeamJoinEvent:
+					go b.TeamJoined(message)
+				default:
+					_ = message
+				}
 			}
 		}
+
+		log.Fatalln("should never be reached")
 	}()
 
 	go func() {
@@ -131,5 +136,6 @@ func main() {
 		log.Fatal(s.ListenAndServe())
 	}()
 
+	log.Println("Gopher is now running")
 	select {}
 }
