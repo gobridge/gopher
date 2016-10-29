@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
+	"cloud.google.com/go/datastore"
 	"github.com/nlopes/slack"
 )
 
 type (
-	sentCL struct {
+	gerritCL struct {
 		Project         string `json:"project"`
 		ChangeID        string `json:"change_id"`
 		Number          int    `json:"_number"`
@@ -26,33 +26,68 @@ type (
 			} `json:"commit"`
 		} `json:"revisions"`
 	}
+
+	goCL struct {
+		Tweeted   bool `datastore:",noindex"`
+		CrawledAt time.Time
+	}
 )
 
 func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
 
-	lastID := ""
+	getCLFromDS := func(query *datastore.Query) (*datastore.Key, *goCL, error) {
+		iter := b.dsClient.Run(b.ctx, query)
 
-	historyParams := slack.HistoryParameters{Count: 100}
-	history, err := b.slackBotAPI.GetGroupHistory(b.channels["golang_cls"].slackID, historyParams)
-	if err != nil {
-		b.logf("error while fetching history: %v\n", err)
-	} else {
-		for _, msg := range history.Messages {
-			if msg.User != b.id {
-				continue
-			}
-			if len(msg.Attachments) != 1 {
-				continue
-			}
-			lastID = strings.ToLower(msg.Attachments[0].Footer)
-			break
+		dst := &goCL{}
+		key, err := iter.Next(dst)
+		if err != nil && err != datastore.Done {
+			b.logf("error while fetching history: %v\n", err)
+			return key, dst, err
 		}
+
+		return key, dst, nil
+	}
+
+	lastID, err := func() (int, error) {
+		latestCLQuery := datastore.NewQuery("GoCL").
+			Order("-CrawledAt").
+			Limit(1).
+			KeysOnly()
+
+		key, _, err := getCLFromDS(latestCLQuery)
+		if err != nil {
+			return -1, err
+		}
+		if key == nil {
+			return -1, nil
+		}
+		return int(key.ID()), nil
+	}()
+
+	if err != nil {
+		b.logf("got error while loading last ID from the datastore: %v\n", err)
 	}
 
 	clLink := func(clNumber int) string {
 		return fmt.Sprintf("https://go-review.googlesource.com/c/%d/", clNumber)
+	}
+
+	saveCL := func(cl gerritCL) error {
+		taskKey := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
+		gocl := &goCL{
+			CrawledAt: time.Now(),
+		}
+		_, err := b.dsClient.Put(b.ctx, taskKey, gocl)
+		return err
+	}
+
+	wasShown := func(cl gerritCL) bool {
+		key := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
+		query := datastore.NewQuery("GoCL").Ancestor(key)
+		key, _, _ = getCLFromDS(query)
+		return key != nil
 	}
 
 	pubChannel := b.channels["golang-cls"].slackID
@@ -60,7 +95,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		pubChannel = pubChannel[1:]
 	}
 
-	processStuff := func(lastID string) string {
+	processCLList := func(lastID int) int {
 		req, err := http.NewRequest("GET", b.gerritLink, nil)
 		req.Header.Add("User-Agent", "Gophers Slack bot")
 		resp, err := b.client.Do(req)
@@ -87,7 +122,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 		// Fix Gerrit adding a random prefix )]}'
 		body = body[4:]
-		cls := []sentCL{}
+		cls := []gerritCL{}
 		err = json.Unmarshal(body, &cls)
 		if err != nil {
 			b.logf("%s\n", err)
@@ -96,7 +131,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 		foundIdx := len(cls) - 1
 		for idx := len(cls) - 1; idx >= 0; idx-- {
-			if strings.ToLower(cls[idx].ChangeID) == lastID {
+			if cls[idx].Number == lastID {
 				foundIdx = idx
 				break
 			}
@@ -107,7 +142,11 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 			if cl.Branch != "master" {
 				continue
 			}
-			lastID = strings.ToLower(cl.ChangeID)
+
+			if wasShown(cl) {
+				continue
+			}
+
 			msg := slack.Attachment{
 				Title:     cl.Subject,
 				TitleLink: clLink(cl.Number),
@@ -120,11 +159,20 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 			if cl.Project != "go" {
 				subject = fmt.Sprintf("[%s] %s", cl.Project, subject)
 			}
+
+			err = saveCL(cl)
+			if err != nil {
+				b.logf("got error while saving CL to datastore: %v", err)
+				return lastID
+			}
+
 			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
 			if err != nil {
 				b.logf("%s\n", err)
 				continue
 			}
+
+			lastID = cl.Number
 
 			_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
 			if err != nil {
@@ -136,8 +184,8 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		return lastID
 	}
 
-	lastID = processStuff(lastID)
+	lastID = processCLList(lastID)
 	for range tk.C {
-		lastID = processStuff(lastID)
+		lastID = processCLList(lastID)
 	}
 }
