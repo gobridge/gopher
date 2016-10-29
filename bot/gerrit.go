@@ -120,6 +120,12 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 				b.logf("%s\n", err)
 				continue
 			}
+
+			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang-cls"].slackID, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
+			if err != nil {
+				b.logf("%s\n", err)
+				continue
+			}
 		}
 
 		return lastID

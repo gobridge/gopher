@@ -705,6 +705,7 @@ func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, toke
 
 			"general":    {description: "general channel", special: true},
 			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
+			"golang-cls": {description: "https://twitter.com/golang_cls", special: true},
 
 			// Do NOT touch the ID on this one
 			"gopher": {description: "direct message channel with Gopher", special: true, slackID: "D258JJQ13"},
