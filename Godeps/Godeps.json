@@ -7,13 +7,18 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Comment": "v1.1-27-g757bef9",
+			"Rev": "757bef944d0f21880861c2dd9c871ca543023cba"
+		},
+		{
 			"ImportPath": "github.com/nlopes/slack",
-			"Comment": "v0.0.1-128-g49e6391",
-			"Rev": "49e63910abfdb2e5416d48e1b08ec8b8ac510c16"
+			"Comment": "v0.0.1-135-gd2250d0",
+			"Rev": "d2250d0b977670083c023c7a45e1ba11fd382ba2"
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "0d8126fc6144eb5257485c59148128691e8ff849"
+			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
 		}
 	]
 }
