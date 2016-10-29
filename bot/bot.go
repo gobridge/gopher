@@ -234,7 +234,10 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	eventText = b.trimBot(eventText)
-	b.logf("message: %q\n", eventText)
+	if b.devMode {
+		b.logf("message: %q\n", eventText)
+	}
+
 	if strings.HasPrefix(eventText, "share cl") {
 		if b.specialRestrictions("golang_cls", eventText, event) {
 			// TODO share stuff on Twitter

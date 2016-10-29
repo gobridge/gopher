@@ -55,6 +55,11 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		return fmt.Sprintf("https://go-review.googlesource.com/c/%d/", clNumber)
 	}
 
+	pubChannel := b.channels["golang-cls"].slackID
+	if pubChannel[:1] == "#" {
+		pubChannel = pubChannel[1:]
+	}
+
 	processStuff := func(lastID string) string {
 		req, err := http.NewRequest("GET", b.gerritLink, nil)
 		req.Header.Add("User-Agent", "Gophers Slack bot")
@@ -121,7 +126,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 				continue
 			}
 
-			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang-cls"].slackID, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
+			_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
 			if err != nil {
 				b.logf("%s\n", err)
 				continue
