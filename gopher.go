@@ -97,18 +97,15 @@ func main() {
 	}()
 
 	go func() {
-		for {
-			select {
-			case msg := <-slackBotRTM.IncomingEvents:
-				switch message := msg.Data.(type) {
-				case *slack.MessageEvent:
-					go b.HandleMessage(message)
+		for msg, ok := <-slackBotRTM.IncomingEvents; ok; {
+			switch message := msg.Data.(type) {
+			case *slack.MessageEvent:
+				go b.HandleMessage(message)
 
-				case *slack.TeamJoinEvent:
-					go b.TeamJoined(message)
-				default:
-					_ = message
-				}
+			case *slack.TeamJoinEvent:
+				go b.TeamJoined(message)
+			default:
+				_ = message
 			}
 		}
 	}()

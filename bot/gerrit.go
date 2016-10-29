@@ -2,7 +2,6 @@ package bot
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,8 +28,6 @@ type (
 	}
 )
 
-var errNonOK = errors.New("non-ok status")
-
 func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
@@ -40,7 +37,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	historyParams := slack.HistoryParameters{Count: 100}
 	history, err := b.slackBotAPI.GetGroupHistory(b.channels["golang_cls"].slackID, historyParams)
 	if err != nil {
-		b.log("error while fetching history: %v\n", err)
+		b.logf("error while fetching history: %v\n", err)
 	} else {
 		for _, msg := range history.Messages {
 			if msg.User != b.id {
@@ -63,7 +60,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		req.Header.Add("User-Agent", "Gophers Slack bot")
 		resp, err := b.client.Do(req)
 		if err != nil {
-			b.log("%s\n", err)
+			b.logf("%s\n", err)
 			return lastID
 		}
 
@@ -75,7 +72,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			b.log("%s\n", err)
+			b.logf("%s\n", err)
 			return lastID
 		}
 
@@ -88,7 +85,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		cls := []sentCL{}
 		err = json.Unmarshal(body, &cls)
 		if err != nil {
-			b.log("%s\n", err)
+			b.logf("%s\n", err)
 			return lastID
 		}
 
@@ -120,7 +117,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 			}
 			_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%s: %s", subject, clLink(cl.Number)), params)
 			if err != nil {
-				b.log("%s\n", err)
+				b.logf("%s\n", err)
 				continue
 			}
 		}

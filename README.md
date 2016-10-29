@@ -37,6 +37,16 @@ kubectl create -f ./secrets.yaml --namespace=gopher-slack-bot
 kubectl create -f ./deployment.yaml --namespace=gopher-slack-bot
 ```
 
+## Development
+
+To run gometalinter
+
+
+```
+go get -v -u github.com/alecthomas/gometalinter
+gometalinter ./... --deadline=20s --vendor --sort=linter --disable=gotype
+```
+
 ## License
 
 This software is created under Apache v2 License. For the full license text, please see License.md
