@@ -25,6 +25,22 @@ spec:
       containers:
       - name: gopher-slack-bot
         image: eu.gcr.io/gopher-slack-bot/bot:ec1c2849cb3d9ea921503a1e1b70a1b91c50f3b9
+        ports:
+         - name: healthz-port
+           containerPort: 8081
+           hostPort: 8081
+        ReadinessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz-port
+          initialDelaySeconds: 15
+          timeoutSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz-port
+          initialDelaySeconds: 15
+          timeoutSeconds: 1
         resources:
           requests:
             cpu: 300m

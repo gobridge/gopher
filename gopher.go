@@ -23,6 +23,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -33,12 +34,16 @@ import (
 
 	"github.com/gopheracademy/gopher/bot"
 
+	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
 )
 
 const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
 
-var botVersion = "HEAD"
+var (
+	botVersion = "HEAD"
+	info       = `{ "version": "` + botVersion + `" }`
+)
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -91,18 +96,43 @@ func main() {
 		b.MonitorGerrit(30 * time.Minute)
 	}()
 
-	for {
-		select {
-		case msg := <-slackBotRTM.IncomingEvents:
-			switch message := msg.Data.(type) {
-			case *slack.MessageEvent:
-				go b.HandleMessage(message)
+	go func() {
+		for {
+			select {
+			case msg := <-slackBotRTM.IncomingEvents:
+				switch message := msg.Data.(type) {
+				case *slack.MessageEvent:
+					go b.HandleMessage(message)
 
-			case *slack.TeamJoinEvent:
-				go b.TeamJoined(message)
-			default:
-				_ = message
+				case *slack.TeamJoinEvent:
+					go b.TeamJoined(message)
+				default:
+					_ = message
+				}
 			}
 		}
-	}
+	}()
+
+	go func() {
+		r := mux.NewRouter()
+
+		r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, info)
+		}).
+			Name("info").
+			Methods("GET")
+
+		s := http.Server{
+			Addr:         ":8081",
+			Handler:      r,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+
+		log.Fatal(s.ListenAndServe())
+	}()
+
+	select {}
 }
