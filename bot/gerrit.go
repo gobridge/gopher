@@ -198,6 +198,7 @@ func (b *Bot) processCLList(lastID int) int {
 	return lastID
 }
 
+// MonitorGerrit handles the Gerrit changes
 func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
@@ -214,7 +215,6 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 	lastID = b.processCLList(lastID)
 	for range tk.C {
-		ctx, dsClient = b.datastoreClient()
 		lastID = b.processCLList(lastID)
 	}
 }

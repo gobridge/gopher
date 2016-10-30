@@ -23,12 +23,15 @@ type (
 		special     bool
 	}
 
+	// Client is the HTTP client
 	Client interface {
 		Do(r *http.Request) (*http.Response, error)
 	}
 
+	// Logger function
 	Logger func(message string, args ...interface{})
 
+	// Bot structure
 	Bot struct {
 		id          string
 		gerritLink  string
@@ -46,6 +49,7 @@ type (
 	}
 )
 
+// Init must be called before anything else in order to initialize the bot
 func (b *Bot) Init(rtm *slack.RTM) error {
 	b.logf("Determining bot / user IDs")
 	users, err := b.slackBotAPI.GetUsers()
@@ -105,6 +109,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	return err
 }
 
+// TeamJoined is called when the someone joins the team
 func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 	if b.devMode {
 		return
@@ -172,6 +177,7 @@ func (b *Bot) specialRestrictions(restriction, eventText string, event *slack.Me
 	return false
 }
 
+// HandleMessage will process the incoming message and
 func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
 		return
@@ -189,39 +195,39 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// All the variations of table flip seem to include this characters so... potato?
 	if strings.Contains(eventText, "︵") || strings.Contains(eventText, "彡") {
-		b.TableUnflip(event)
+		b.tableUnflip(event)
 		return
 	}
 
 	if strings.Contains(eventText, "my adorable little gophers") {
-		b.ReactToEvent(event, "gopher")
+		b.reactToEvent(event, "gopher")
 		return
 	}
 
 	if strings.Contains(eventText, "bbq") {
-		b.ReactToEvent(event, "bbqgopher")
+		b.reactToEvent(event, "bbqgopher")
 		return
 	}
 
 	if strings.Contains(eventText, "ermergerd") ||
 		strings.Contains(eventText, "ermahgerd") {
-		b.ReactToEvent(event, "dragon")
+		b.reactToEvent(event, "dragon")
 		return
 	}
 
 	if strings.Contains(eventText, "beer me") {
-		b.ReactToEvent(event, "beer")
-		b.ReactToEvent(event, "beers")
+		b.reactToEvent(event, "beer")
+		b.reactToEvent(event, "beers")
 		return
 	}
 
 	if strings.HasPrefix(eventText, "ghd/") {
-		b.Godoc(event, "github.com/", 4)
+		b.godoc(event, "github.com/", 4)
 		return
 	}
 
 	if strings.HasPrefix(eventText, "d/") {
-		b.Godoc(event, "", 2)
+		b.godoc(event, "", 2)
 		return
 	}
 
@@ -229,7 +235,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if !strings.Contains(eventText, "nolink") &&
 		event.File != nil &&
 		(event.File.Filetype == "go" || event.File.Filetype == "text") {
-		b.SuggestPlayground(event)
+		b.suggestPlayground(event)
 		return
 	}
 
@@ -249,108 +255,108 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	if eventText == "newbie resources" {
-		b.NewbieResources(event, false)
+		b.newbieResources(event, false)
 		return
 	}
 
 	if eventText == "newbie resources pvt" {
-		b.NewbieResources(event, true)
+		b.newbieResources(event, true)
 		return
 	}
 
 	if eventText == "recommended channels" {
-		b.RecommendedChannels(event)
+		b.recommendedChannels(event)
 		return
 	}
 
 	if eventText == "oss help" ||
 		eventText == "oss help wanted" {
-		b.OSSHelp(event)
+		b.ossHelp(event)
 		return
 	}
 
 	if eventText == "work with forks" {
-		b.GoForks(event)
+		b.goForks(event)
 		return
 	}
 
 	if eventText == "block forever" {
-		b.GoBlockForever(event)
+		b.goBlockForever(event)
 		return
 	}
 
 	if eventText == "http timeouts" {
-		b.DealWithHTTPTimeouts(event)
+		b.dealWithHTTPTimeouts(event)
 		return
 	}
 
 	if eventText == "database tutorial" {
-		b.GoDatabaseTutorial(event)
+		b.goDatabaseTutorial(event)
 		return
 	}
 
 	if eventText == "xkcd:standards" {
-		b.XKCD(event, "https://xkcd.com/927/")
+		b.xkcd(event, "https://xkcd.com/927/")
 		return
 	}
 
 	if eventText == "xkcd:compiling" {
-		b.XKCD(event, "https://xkcd.com/303/")
+		b.xkcd(event, "https://xkcd.com/303/")
 		return
 	}
 
 	if eventText == "xkcd:optimization" {
-		b.XKCD(event, "https://xkcd.com/1691/")
+		b.xkcd(event, "https://xkcd.com/1691/")
 		return
 	}
 
 	if eventText == "package layout" {
-		b.PackageLayout(event)
+		b.packageLayout(event)
 		return
 	}
 
 	if strings.HasPrefix(eventText, "library for") {
-		b.SearchLibrary(event)
+		b.searchLibrary(event)
 		return
 	}
 
 	if strings.Contains(eventText, "thank") ||
 		eventText == "cheers" ||
 		eventText == "hello" {
-		b.ReactToEvent(event, "gopher")
+		b.reactToEvent(event, "gopher")
 		return
 	}
 
 	if eventText == "wave" {
-		b.ReactToEvent(event, "wave")
-		b.ReactToEvent(event, "gopher")
+		b.reactToEvent(event, "wave")
+		b.reactToEvent(event, "gopher")
 		return
 	}
 
 	if eventText == "flip coin" ||
 		eventText == "flip a coin" {
-		b.ReplyFlipCoin(event)
+		b.replyFlipCoin(event)
 		return
 	}
 
 	if eventText == "where do you live?" ||
 		eventText == "stack" {
-		b.ReplyBotLocation(event)
+		b.replyBotLocation(event)
 		return
 	}
 
 	if eventText == "version" {
-		b.ReplyVersion(event)
+		b.replyVersion(event)
 		return
 	}
 
 	if eventText == "help" {
-		b.Help(event)
+		b.help(event)
 		return
 	}
 }
 
-func (b *Bot) NewbieResources(event *slack.MessageEvent, private bool) {
+func (b *Bot) newbieResources(event *slack.MessageEvent, private bool) {
 	newbieResources := slack.Attachment{
 		Text: `First you should take the language tour: <http://tour.golang.org/>
 
@@ -373,7 +379,7 @@ If you prefer books, you can try these:
  - <https://www.manning.com/books/go-in-action> (if you e-mail @wkennedy at bill@ardanlabs.com you can get a free copy for being part of this Slack)
 
 If you want to learn how to organize your Go project, make sure to read: <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>.
-Once you are acustomed to the language and syntax, you can read this series of articles for a walkthrough the various standard library packages: <https://medium.com/go-walkthrough>.
+Once you are accustomed to the language and syntax, you can read this series of articles for a walkthrough the various standard library packages: <https://medium.com/go-walkthrough>.
 
 Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a list of even more resources to learn Go`,
 	}
@@ -390,7 +396,8 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 		return
 	}
 }
-func (b *Bot) RecommendedChannels(event *slack.MessageEvent) {
+
+func (b *Bot) recommendedChannels(event *slack.MessageEvent) {
 	message := slack.Attachment{}
 
 	for idx, val := range b.channels {
@@ -409,7 +416,7 @@ func (b *Bot) RecommendedChannels(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) SuggestPlayground(event *slack.MessageEvent) {
+func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 	if event.File == nil {
 		return
 	}
@@ -483,7 +490,7 @@ func (b *Bot) SuggestPlayground(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) OSSHelp(event *slack.MessageEvent) {
+func (b *Bot) ossHelp(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
 	if err != nil {
@@ -492,16 +499,7 @@ func (b *Bot) OSSHelp(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) TenKGophers(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `10000 Gophers!!!`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) GoForks(event *slack.MessageEvent) {
+func (b *Bot) goForks(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
 	if err != nil {
@@ -510,7 +508,7 @@ func (b *Bot) GoForks(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) GoBlockForever(event *slack.MessageEvent) {
+func (b *Bot) goBlockForever(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
 	if err != nil {
@@ -519,7 +517,7 @@ func (b *Bot) GoBlockForever(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) GoDatabaseTutorial(event *slack.MessageEvent) {
+func (b *Bot) goDatabaseTutorial(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
 	if err != nil {
@@ -528,7 +526,7 @@ func (b *Bot) GoDatabaseTutorial(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) DealWithHTTPTimeouts(event *slack.MessageEvent) {
+func (b *Bot) dealWithHTTPTimeouts(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
 	if err != nil {
@@ -537,7 +535,7 @@ func (b *Bot) DealWithHTTPTimeouts(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) TableUnflip(event *slack.MessageEvent) {
+func (b *Bot) tableUnflip(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
 	if err != nil {
@@ -546,7 +544,7 @@ func (b *Bot) TableUnflip(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) SearchLibrary(event *slack.MessageEvent) {
+func (b *Bot) searchLibrary(event *slack.MessageEvent) {
 	searchTerm := strings.ToLower(event.Text)
 	if idx := strings.Index(searchTerm, "library for"); idx != -1 {
 		searchTerm = event.Text[idx+11:]
@@ -576,7 +574,7 @@ func (b *Bot) SearchLibrary(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) XKCD(event *slack.MessageEvent, imageLink string) {
+func (b *Bot) xkcd(event *slack.MessageEvent, imageLink string) {
 	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
 	if err != nil {
@@ -585,7 +583,7 @@ func (b *Bot) XKCD(event *slack.MessageEvent, imageLink string) {
 	}
 }
 
-func (b *Bot) Godoc(event *slack.MessageEvent, prefix string, position int) {
+func (b *Bot) godoc(event *slack.MessageEvent, prefix string, position int) {
 	link := event.Text[position:]
 	if strings.Contains(link, " ") {
 		link = link[:strings.Index(link, " ")]
@@ -599,7 +597,7 @@ func (b *Bot) Godoc(event *slack.MessageEvent, prefix string, position int) {
 	}
 }
 
-func (b *Bot) ReactToEvent(event *slack.MessageEvent, reaction string) {
+func (b *Bot) reactToEvent(event *slack.MessageEvent, reaction string) {
 	item := slack.ItemRef{
 		Channel:   event.Channel,
 		Timestamp: event.Timestamp,
@@ -611,7 +609,7 @@ func (b *Bot) ReactToEvent(event *slack.MessageEvent, reaction string) {
 	}
 }
 
-func (b *Bot) ReplyVersion(event *slack.MessageEvent) {
+func (b *Bot) replyVersion(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", b.version), params)
 	if err != nil {
@@ -620,7 +618,7 @@ func (b *Bot) ReplyVersion(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) Help(event *slack.MessageEvent) {
+func (b *Bot) help(event *slack.MessageEvent) {
 	message := slack.Attachment{
 		Text: `- "newbie resources" -> get a list of newbie resources
 - "newbie resources pvt" -> get a list of newbie resources as a private message
@@ -646,7 +644,7 @@ func (b *Bot) Help(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) ReplyBotLocation(event *slack.MessageEvent) {
+func (b *Bot) replyBotLocation(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
 	if err != nil {
@@ -655,7 +653,7 @@ func (b *Bot) ReplyBotLocation(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) ReplyFlipCoin(event *slack.MessageEvent) {
+func (b *Bot) replyFlipCoin(event *slack.MessageEvent) {
 	buff := make([]byte, 1, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
@@ -673,7 +671,7 @@ func (b *Bot) ReplyFlipCoin(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) PackageLayout(event *slack.MessageEvent) {
+func (b *Bot) packageLayout(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "This article will explain how to organize your Go packages <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>", params)
 	if err != nil {
@@ -682,6 +680,7 @@ func (b *Bot) PackageLayout(event *slack.MessageEvent) {
 	}
 }
 
+// NewBot will create a new Slack bot
 func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
 		gerritLink:  gerritLink,
