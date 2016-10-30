@@ -5,7 +5,7 @@ metadata:
   namespace: gopher-slack-bot
   labels:
     app: gopher-slack-bot
-    version: 5c8f7b4a5f59fe7c13f8ecce266ac983bc55f98b
+    version: 810a0b285468265bf5a8486c051e641c61564b8f
   annotations:
     description: Gopher Slack Bot
 spec:
@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: gopher-slack-bot
-        image: eu.gcr.io/gopher-slack-bot/bot:5c8f7b4a5f59fe7c13f8ecce266ac983bc55f98b
+        image: eu.gcr.io/gopher-slack-bot/bot:810a0b285468265bf5a8486c051e641c61564b8f
         ports:
          - name: healthz-port
            containerPort: 8081
