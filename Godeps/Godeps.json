@@ -22,6 +22,30 @@
 			"Rev": "28994ff9b5baa92fe337dacaee126fcf80fefa3e"
 		},
 		{
+			"ImportPath": "github.com/ChimeraCoder/anaconda",
+			"Rev": "00ecb7b4510497dc28cd46a598007ab8fe01f889"
+		},
+		{
+			"ImportPath": "github.com/ChimeraCoder/tokenbucket",
+			"Rev": "c5a927568de7aad8a58127d80bcd36ca4e71e454"
+		},
+		{
+			"ImportPath": "github.com/azr/backoff",
+			"Rev": "53511d3c733003985b0b76f733df1f4d0095ee6a"
+		},
+		{
+			"ImportPath": "github.com/dustin/go-jsonpointer",
+			"Rev": "ba0abeacc3dcca5b9b20f31509c46794edbc9965"
+		},
+		{
+			"ImportPath": "github.com/dustin/gojson",
+			"Rev": "2e71ec9dd5adce3b168cd0dbde03b5cc04951c30"
+		},
+		{
+			"ImportPath": "github.com/garyburd/go-oauth/oauth",
+			"Rev": "1dd5f05ec64cbda548d22836ceb6cc7ae749c2ee"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/proto",
 			"Rev": "98fa357170587e470c5f27d3c3ea0947b71eb455"
 		},
@@ -53,39 +77,39 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context/ctxhttp",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/http2",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/http2/hpack",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/idna",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/internal/timeseries",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/lex/httplex",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/trace",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "3fe3024eef808ba2798cc1855690f49e2b860573"
+			"Rev": "b336a971b799939dd16ae9b1df8334cb8b977c4d"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
