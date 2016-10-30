@@ -2,4 +2,6 @@
 .idea/misc.xml
 .idea/libraries
 secrets.yaml
+secrets-datastore.yaml
+datastore.json
 gopher
