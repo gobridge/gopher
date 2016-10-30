@@ -160,6 +160,9 @@ Now, enjoy the community and have fun.`
 
 func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 	return strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">")) ||
+		strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">:")) ||
+		strings.HasPrefix(eventText, "gopher ") ||
+		strings.HasPrefix(eventText, "gopher: ") ||
 		event.Channel == b.channels["gopher"].slackID
 }
 
