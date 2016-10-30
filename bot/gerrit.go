@@ -230,66 +230,68 @@ func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
 	eventText = strings.Replace(eventText, "share cl", "", -1)
 	eventText = strings.Trim(eventText, " \n")
 
-	clNumber, err := strconv.ParseInt(eventText, 10, 64)
-	if err != nil {
-		b.logf("could not convert string to int: %v from event: %#v\n", err, event)
-
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not share CL, please try again`, params)
+	for _, text := range strings.Fields(eventText) {
+		clNumber, err := strconv.ParseInt(text, 10, 64)
 		if err != nil {
-			b.logf("%s\n", err)
+			b.logf("could not convert string to int: %v from event: %#v\n", err, event)
+
+			params := slack.PostMessageParameters{AsUser: true}
+			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			if err != nil {
+				b.logf("%s\n", err)
+			}
+			continue
 		}
-		return
-	}
 
-	ctx, dsClient := b.datastoreClient()
-	defer dsClient.Close()
+		ctx, dsClient := b.datastoreClient()
+		defer dsClient.Close()
 
-	key := datastore.NewKey(ctx, "GoCL", "", clNumber, nil)
-	query := datastore.NewQuery("GoCL").Ancestor(key)
-	key, cl, err := b.getCLFromDS(ctx, dsClient, query)
-	if err != nil {
-		b.logf("error while retriving CL from the DB: %v\n", err)
-
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not share CL, please try again`, params)
+		key := datastore.NewKey(ctx, "GoCL", "", clNumber, nil)
+		query := datastore.NewQuery("GoCL").Ancestor(key)
+		key, cl, err := b.getCLFromDS(ctx, dsClient, query)
 		if err != nil {
-			b.logf("%s\n", err)
+			b.logf("error while retriving CL from the DB: %v\n", err)
+
+			params := slack.PostMessageParameters{AsUser: true}
+			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			if err != nil {
+				b.logf("%s\n", err)
+			}
+			continue
 		}
-		return
-	}
 
-	if cl.Tweeted {
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessage(event.User, `Already tweeted`, params)
-		if err != nil {
-			b.logf("%s\n", err)
+		if cl.Tweeted {
+			params := slack.PostMessageParameters{AsUser: true}
+			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Already tweeted CL %d`, clNumber), params)
+			if err != nil {
+				b.logf("%s\n", err)
+			}
+			continue
 		}
-		return
-	}
 
-	message := cl.Message + " " + cl.URL
-	_, err = b.twitterAPI.PostTweet(message, nil)
-	if err != nil {
-		b.logf("got error while tweeting CL: %d %#v\n", clNumber, err)
-
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not share CL, please try again`, params)
+		message := cl.Message + " " + cl.URL
+		_, err = b.twitterAPI.PostTweet(message, nil)
 		if err != nil {
-			b.logf("%s\n", err)
+			b.logf("got error while tweeting CL: %d %#v\n", clNumber, err)
+
+			params := slack.PostMessageParameters{AsUser: true}
+			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			if err != nil {
+				b.logf("%s\n", err)
+			}
+			continue
 		}
-		return
-	}
 
-	cl.Tweeted = true
-	err = b.updateCL(ctx, dsClient, key, cl)
-	if err != nil {
-		b.logf("got error while updating CL to datastore: %v", err)
-
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not update tweet status in the DB`, params)
+		cl.Tweeted = true
+		err = b.updateCL(ctx, dsClient, key, cl)
 		if err != nil {
-			b.logf("%s\n", err)
+			b.logf("got error while updating CL to datastore: %v", err)
+
+			params := slack.PostMessageParameters{AsUser: true}
+			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not update tweet status for CL %d in the DB`, clNumber), params)
+			if err != nil {
+				b.logf("%s\n", err)
+			}
 		}
 	}
 }
