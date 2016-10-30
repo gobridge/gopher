@@ -168,7 +168,11 @@ func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 
 func (b *Bot) trimBot(msg string) string {
 	msg = strings.Replace(msg, strings.ToLower("<@"+b.id+">"), "", 1)
-	msg = strings.Trim(msg, " \n")
+	if strings.HasPrefix(msg, "gopher:") ||
+		strings.HasPrefix(msg, "gopher") {
+		msg = strings.Replace(msg, strings.ToLower("gopher"), "", 1)
+	}
+	msg = strings.Trim(msg, " :\n")
 	return msg
 }
 
