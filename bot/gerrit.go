@@ -28,8 +28,8 @@ type (
 	}
 
 	goCL struct {
-		Tweeted   bool `datastore:",noindex"`
-		CrawledAt time.Time
+		Tweeted   bool      `datastore:"Tweeted,noindex"`
+		CrawledAt time.Time `datastore:"CrawledAt"`
 	}
 )
 
@@ -44,7 +44,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		key, err := iter.Next(dst)
 		if err != nil && err != datastore.Done {
 			b.logf("error while fetching history: %v\n", err)
-			return key, dst, err
+			return nil, nil, err
 		}
 
 		return key, dst, nil
@@ -68,6 +68,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 
 	if err != nil {
 		b.logf("got error while loading last ID from the datastore: %v\n", err)
+		return
 	}
 
 	clLink := func(clNumber int) string {
@@ -83,11 +84,11 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		return err
 	}
 
-	wasShown := func(cl gerritCL) bool {
+	wasShown := func(cl gerritCL) (bool, error) {
 		key := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
 		query := datastore.NewQuery("GoCL").Ancestor(key)
-		key, _, _ = getCLFromDS(query)
-		return key != nil
+		key, _, err := getCLFromDS(query)
+		return key != nil, err
 	}
 
 	pubChannel := b.channels["golang-cls"].slackID
@@ -107,6 +108,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
+			b.logf("got non-200 code: %d from gerrit api", resp.StatusCode)
 			return lastID
 		}
 
@@ -143,7 +145,10 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 				continue
 			}
 
-			if wasShown(cl) {
+			if _, err := wasShown(cl); err == nil {
+				continue
+			} else {
+				b.logf("got error: %v\n", err)
 				continue
 			}
 

@@ -50,7 +50,7 @@ spec:
           privileged: false
         env:
           - name: GOOGLE_APPLICATION_CREDENTIALS
-            value: /datastore.json
+            value: /tmp/datastore.json
           - name: GOPHERS_SLACK_BOT_NAME
             valueFrom:
               secretKeyRef:
