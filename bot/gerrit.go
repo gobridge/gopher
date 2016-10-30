@@ -9,6 +9,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/nlopes/slack"
+	"golang.org/x/net/context"
 )
 
 type (
@@ -33,12 +34,26 @@ type (
 	}
 )
 
+func (b *Bot) datastoreClient() (context.Context, *datastore.Client) {
+	ctx := context.Background()
+	projectID := "gopher-slack-bot"
+	dsClient, err := datastore.NewClient(ctx, projectID)
+	if err != nil {
+		b.logf("Failed to create client: %v", err)
+		panic(err)
+	}
+
+	return ctx, dsClient
+}
+
 func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
 
+	ctx, dsClient := b.datastoreClient()
+
 	getCLFromDS := func(query *datastore.Query) (*datastore.Key, *goCL, error) {
-		iter := b.dsClient.Run(b.ctx, query)
+		iter := dsClient.Run(ctx, query)
 
 		dst := &goCL{}
 		key, err := iter.Next(dst)
@@ -76,16 +91,16 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	}
 
 	saveCL := func(cl gerritCL) error {
-		taskKey := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
+		taskKey := datastore.NewKey(ctx, "GoCL", "", int64(cl.Number), nil)
 		gocl := &goCL{
 			CrawledAt: time.Now(),
 		}
-		_, err := b.dsClient.Put(b.ctx, taskKey, gocl)
+		_, err := dsClient.Put(ctx, taskKey, gocl)
 		return err
 	}
 
 	wasShown := func(cl gerritCL) (bool, error) {
-		key := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
+		key := datastore.NewKey(ctx, "GoCL", "", int64(cl.Number), nil)
 		query := datastore.NewQuery("GoCL").Ancestor(key)
 		key, _, err := getCLFromDS(query)
 		return key != nil, err
@@ -189,8 +204,10 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 		return lastID
 	}
 
+	ctx, dsClient = b.datastoreClient()
 	lastID = processCLList(lastID)
 	for range tk.C {
+		ctx, dsClient = b.datastoreClient()
 		lastID = processCLList(lastID)
 	}
 }

@@ -34,10 +34,8 @@ import (
 
 	"github.com/gopheracademy/gopher/bot"
 
-	"cloud.google.com/go/datastore"
 	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
-	"golang.org/x/net/context"
 )
 
 const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
@@ -48,7 +46,7 @@ var (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetFlags(log.Lshortfile)
 
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
 	slackBotToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
@@ -84,18 +82,11 @@ func main() {
 		botName = botName[1:]
 	}
 
-	ctx := context.Background()
-	projectID := "gopher-slack-bot"
-	dsClient, err := datastore.NewClient(ctx, projectID)
-	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
-	}
-
 	slackBotRTM := slackBotAPI.NewRTM()
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
-	b := bot.NewBot(ctx, slackBotAPI, httpClient, dsClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	b := bot.NewBot(slackBotAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(slackBotRTM); err != nil {
 		panic(err)
 	}

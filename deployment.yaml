@@ -5,7 +5,7 @@ metadata:
   namespace: gopher-slack-bot
   labels:
     app: gopher-slack-bot
-    version: ec1c2849cb3d9ea921503a1e1b70a1b91c50f3b9
+    version: 37668fb06780c04d9fb6fea38ba2eba6f4a70d9f
   annotations:
     description: Gopher Slack Bot
 spec:
@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: gopher-slack-bot
-        image: eu.gcr.io/gopher-slack-bot/bot:ec1c2849cb3d9ea921503a1e1b70a1b91c50f3b9
+        image: eu.gcr.io/gopher-slack-bot/bot:37668fb06780c04d9fb6fea38ba2eba6f4a70d9f
         ports:
          - name: healthz-port
            containerPort: 8081
@@ -65,12 +65,12 @@ spec:
           - name: datastore
             mountPath: /tmp
             readOnly: true
-      restartPolicy: OnFailure
+      restartPolicy: Always
       dnsPolicy: ClusterFirst
       volumes:
         - name: datastore
           secret:
             secretName: gopher-datastore
             items:
-              key: file
-              path: datastore.json
+              - key: file
+                path: datastore.json

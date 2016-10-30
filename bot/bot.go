@@ -12,9 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"cloud.google.com/go/datastore"
 	"github.com/nlopes/slack"
-	"golang.org/x/net/context"
 )
 
 type (
@@ -44,8 +42,6 @@ type (
 		slackLinkRE *regexp.Regexp
 		channels    map[string]slackChan
 		slackBotAPI *slack.Client
-		dsClient    *datastore.Client
-		ctx         context.Context
 		logf        Logger
 	}
 )
@@ -686,9 +682,8 @@ func (b *Bot) PackageLayout(event *slack.MessageEvent) {
 	}
 }
 
-func NewBot(ctx context.Context, slackBotAPI *slack.Client, httpClient Client, dsClient *datastore.Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
-		ctx:         ctx,
 		gerritLink:  gerritLink,
 		name:        name,
 		token:       token,
@@ -697,7 +692,6 @@ func NewBot(ctx context.Context, slackBotAPI *slack.Client, httpClient Client, d
 		devMode:     devMode,
 		logf:        log,
 		slackBotAPI: slackBotAPI,
-		dsClient:    dsClient,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
