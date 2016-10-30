@@ -51,7 +51,7 @@ func (cl *gerritCL) message() string {
 	return subject
 }
 
-func (b *Bot) datastoreClient() (context.Context, *datastore.Client) {
+func (b *Bot) DatastoreClient() (context.Context, *datastore.Client) {
 	ctx := context.Background()
 	projectID := "gopher-slack-bot"
 	dsClient, err := datastore.NewClient(ctx, projectID)
@@ -76,7 +76,7 @@ func (b *Bot) getCLFromDS(ctx context.Context, dsClient *datastore.Client, query
 	return key, dst, nil
 }
 
-func (b *Bot) getLastSeenCL(ctx context.Context, dsClient *datastore.Client) (int, error) {
+func (b *Bot) GetLastSeenCL(ctx context.Context, dsClient *datastore.Client) (int, error) {
 	latestCLQuery := datastore.NewQuery("GoCL").
 		Order("-CrawledAt").
 		Limit(1).
@@ -165,7 +165,7 @@ func (b *Bot) processCLList(lastID int) int {
 		pubChannel = pubChannel[1:]
 	}
 
-	ctx, dsClient := b.datastoreClient()
+	ctx, dsClient := b.DatastoreClient()
 	defer dsClient.Close()
 	for idx := foundIdx - 1; idx >= 0; idx-- {
 		cl := cls[idx]
@@ -243,7 +243,7 @@ func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
 			continue
 		}
 
-		ctx, dsClient := b.datastoreClient()
+		ctx, dsClient := b.DatastoreClient()
 		defer dsClient.Close()
 
 		key := datastore.NewKey(ctx, "GoCL", "", clNumber, nil)
@@ -301,9 +301,9 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
 
-	ctx, dsClient := b.datastoreClient()
+	ctx, dsClient := b.DatastoreClient()
 
-	lastID, err := b.getLastSeenCL(ctx, dsClient)
+	lastID, err := b.GetLastSeenCL(ctx, dsClient)
 	if err != nil {
 		b.logf("got error while loading last ID from the datastore: %v\n", err)
 		dsClient.Close()

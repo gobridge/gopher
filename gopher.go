@@ -115,9 +115,25 @@ func main() {
 		panic(err)
 	}
 
+	ctx, dsClient := b.DatastoreClient()
+	_, err := b.GetLastSeenCL(ctx, dsClient)
+	if err != nil {
+		log.Printf("got error: %v\n", err)
+		panic(err)
+	}
+	dsClient.Close()
+
 	go func() {
 		<-time.After(1 * time.Second)
-		b.MonitorGerrit(30 * time.Minute)
+		for i := 0; i < 7; i++ {
+			b.MonitorGerrit(30 * time.Minute)
+			log.Printf("monitoring Gerrit failed %d times\n", i+1)
+			if i == 6 {
+				break
+			}
+			time.Sleep(time.Duration(i*10) * time.Second)
+		}
+		panic("monitoring Gerrit was terminated")
 	}()
 
 	go func() {
