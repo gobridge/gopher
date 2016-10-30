@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -30,12 +32,23 @@ type (
 
 	goCL struct {
 		Tweeted   bool      `datastore:"Tweeted,noindex"`
+		URL       string    `datastore:"URL,noindex"`
+		Message   string    `datastore:"Message,noindex"`
 		CrawledAt time.Time `datastore:"CrawledAt"`
 	}
 )
 
 func (cl *gerritCL) link() string {
 	return fmt.Sprintf("https://go-review.googlesource.com/c/%d/", cl.Number)
+}
+
+func (cl *gerritCL) message() string {
+	subject := cl.Subject
+	if cl.Project != "go" {
+		subject = fmt.Sprintf("[%s] %s", cl.Project, subject)
+	}
+
+	return subject
 }
 
 func (b *Bot) datastoreClient() (context.Context, *datastore.Client) {
@@ -89,6 +102,8 @@ func (b *Bot) wasShown(ctx context.Context, dsClient *datastore.Client, cl gerri
 func (b *Bot) saveCL(ctx context.Context, dsClient *datastore.Client, cl gerritCL) error {
 	taskKey := datastore.NewKey(ctx, "GoCL", "", int64(cl.Number), nil)
 	gocl := &goCL{
+		URL:       cl.link(),
+		Message:   cl.message(),
 		CrawledAt: time.Now(),
 	}
 	_, err := dsClient.Put(ctx, taskKey, gocl)
@@ -169,10 +184,6 @@ func (b *Bot) processCLList(lastID int) int {
 		}
 		params := slack.PostMessageParameters{AsUser: true}
 		params.Attachments = append(params.Attachments, msg)
-		subject := cl.Subject
-		if cl.Project != "go" {
-			subject = fmt.Sprintf("[%s] %s", cl.Project, subject)
-		}
 
 		err = b.saveCL(ctx, dsClient, cl)
 		if err != nil {
@@ -180,7 +191,7 @@ func (b *Bot) processCLList(lastID int) int {
 			return lastID
 		}
 
-		_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%s: %s", subject, cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%s: %s", cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
@@ -188,7 +199,7 @@ func (b *Bot) processCLList(lastID int) int {
 
 		lastID = cl.Number
 
-		_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("%s: %s", subject, cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("%s: %s", cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
@@ -196,6 +207,85 @@ func (b *Bot) processCLList(lastID int) int {
 	}
 
 	return lastID
+}
+
+func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
+	if !b.specialRestrictions("golang_cls", event) {
+		b.logf("share attempt caught: %#v\n", event)
+
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := b.slackBotAPI.PostMessage(event.User, `You are not authorized to share CLs`, params)
+		if err != nil {
+			b.logf("%s\n", err)
+		}
+		return
+	}
+
+	eventText = strings.Replace(eventText, "share cl", "", -1)
+	eventText = strings.Trim(eventText, " \n")
+
+	clNumber, err := strconv.ParseInt(eventText, 10, 64)
+	if err != nil {
+		b.logf("could not convert string to int: %v from event: %#v\n", err, event)
+
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not share CL, please try again`, params)
+		if err != nil {
+			b.logf("%s\n", err)
+		}
+		return
+	}
+
+	ctx, dsClient := b.datastoreClient()
+	defer dsClient.Close()
+
+	key := datastore.NewKey(ctx, "GoCL", "", clNumber, nil)
+	query := datastore.NewQuery("GoCL").Ancestor(key)
+	key, cl, err := b.getCLFromDS(ctx, dsClient, query)
+	if err != nil {
+		b.logf("error while retriving CL from the DB: %v\n", err)
+
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not share CL, please try again`, params)
+		if err != nil {
+			b.logf("%s\n", err)
+		}
+		return
+	}
+
+	if cl.Tweeted {
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := b.slackBotAPI.PostMessage(event.User, `Already tweeted`, params)
+		if err != nil {
+			b.logf("%s\n", err)
+		}
+		return
+	}
+
+	message := cl.Message + " " + cl.URL
+	_, err = b.twitterAPI.PostTweet(message, nil)
+	if err != nil {
+		b.logf("got error while tweeting CL: %d %#v\n", clNumber, err)
+
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not share CL, please try again`, params)
+		if err != nil {
+			b.logf("%s\n", err)
+		}
+		return
+	}
+
+	cl.Tweeted = true
+	err = b.saveCL(ctx, dsClient, cl)
+	if err != nil {
+		b.logf("got error while updating CL to datastore: %v", err)
+
+		params := slack.PostMessageParameters{AsUser: true}
+		_, _, err := b.slackBotAPI.PostMessage(event.User, `Could not update tweet status in the DB`, params)
+		if err != nil {
+			b.logf("%s\n", err)
+		}
+	}
 }
 
 // MonitorGerrit handles the Gerrit changes

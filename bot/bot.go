@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ChimeraCoder/anaconda"
 	"github.com/nlopes/slack"
 )
 
@@ -45,6 +46,7 @@ type (
 		slackLinkRE *regexp.Regexp
 		channels    map[string]slackChan
 		slackBotAPI *slack.Client
+		twitterAPI  *anaconda.TwitterApi
 		logf        Logger
 	}
 )
@@ -168,7 +170,7 @@ func (b *Bot) trimBot(msg string) string {
 }
 
 // limit access to certain functionality
-func (b *Bot) specialRestrictions(restriction, eventText string, event *slack.MessageEvent) bool {
+func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent) bool {
 	if restriction == "golang_cls" {
 		return event.Channel == b.channels["golang_cls"].slackID &&
 			(event.User == b.users["dlsniper"] || event.User == b.users["dominikh"])
@@ -188,7 +190,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if b.devMode {
 		b.logf("%#v\n", *event)
 		b.logf("got message: %s\nisBotMessage: %t\n", eventText, b.isBotMessage(event, eventText))
-
 		b.logf("channel: %s -> message: %q\n", event.Channel, b.trimBot(eventText))
 		return
 	}
@@ -249,9 +250,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.HasPrefix(eventText, "share cl") {
-		if b.specialRestrictions("golang_cls", eventText, event) {
-			// TODO share stuff on Twitter
-		}
+		b.shareCL(event, eventText)
+		return
 	}
 
 	if eventText == "newbie resources" {
@@ -681,7 +681,7 @@ func (b *Bot) packageLayout(event *slack.MessageEvent) {
 }
 
 // NewBot will create a new Slack bot
-func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(slackBotAPI *slack.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
 		gerritLink:  gerritLink,
 		name:        name,
@@ -691,6 +691,7 @@ func NewBot(slackBotAPI *slack.Client, httpClient Client, gerritLink, name, toke
 		devMode:     devMode,
 		logf:        log,
 		slackBotAPI: slackBotAPI,
+		twitterAPI:  twitterAPI,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),

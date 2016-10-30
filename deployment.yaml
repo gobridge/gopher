@@ -5,12 +5,12 @@ metadata:
   namespace: gopher-slack-bot
   labels:
     app: gopher-slack-bot
-    version: 37668fb06780c04d9fb6fea38ba2eba6f4a70d9f
+    version: 5c8f7b4a5f59fe7c13f8ecce266ac983bc55f98b
   annotations:
     description: Gopher Slack Bot
 spec:
   replicas: 1
-  revisionHistoryLimit: 2
+  revisionHistoryLimit: 1
   minReadySeconds: 10
   strategy:
     type: RollingUpdate
@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: gopher-slack-bot
-        image: eu.gcr.io/gopher-slack-bot/bot:37668fb06780c04d9fb6fea38ba2eba6f4a70d9f
+        image: eu.gcr.io/gopher-slack-bot/bot:5c8f7b4a5f59fe7c13f8ecce266ac983bc55f98b
         ports:
          - name: healthz-port
            containerPort: 8081
@@ -54,13 +54,33 @@ spec:
           - name: GOPHERS_SLACK_BOT_NAME
             valueFrom:
               secretKeyRef:
-                name: gophersecret
+                name: gopher-secret
                 key: botname
           - name: GOPHERS_SLACK_BOT_TOKEN
             valueFrom:
               secretKeyRef:
-                name: gophersecret
+                name: gopher-secret
                 key: token
+          - name: GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: gopher-twitter-secret
+                key: consumerKey
+          - name: GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: gopher-twitter-secret
+                key: consumerSecret
+          - name: GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: gopher-twitter-secret
+                key: accessToken
+          - name: GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: gopher-twitter-secret
+                key: accessTokenSecret
         volumeMounts:
           - name: datastore
             mountPath: /tmp

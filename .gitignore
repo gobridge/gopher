@@ -3,5 +3,6 @@
 .idea/libraries
 secrets.yaml
 secrets-datastore.yaml
+secrets-twitter.yaml
 datastore.json
 gopher

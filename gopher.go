@@ -24,7 +24,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/gopheracademy/gopher/bot"
 
+	"github.com/ChimeraCoder/anaconda"
 	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
 )
@@ -51,25 +51,37 @@ func main() {
 
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
 	slackBotToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
-
+	twitterConsumerKey := os.Getenv("GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY")
+	twitterConsumerSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET")
+	twitterAccessToken := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN")
+	twitterAccessTokenSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
 	devMode := os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE") == "true"
 
 	if slackBotToken == "" {
-		log.Fatal("slack bot token must be set in GOPHERS_SLACK_BOT_TOKEN")
+		log.Fatalln("slack bot token must be set in GOPHERS_SLACK_BOT_TOKEN")
 	}
 
 	if botName == "" {
 		if devMode {
-			log.Fatal("bot name must be set in GOPHERS_SLACK_BOT_NAME")
+			log.Fatalln("bot name must be set in GOPHERS_SLACK_BOT_NAME")
 		}
 		botName = "tempbot"
 	}
 
-	if devMode {
-		dsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-		fmt.Printf("got env var GOOGLE_APPLICATION_CREDENTIALS=%s\n", dsFile)
-		dsFileC, dsErr := ioutil.ReadFile(dsFile)
-		fmt.Printf("got dserr: %v\n contents: %s\n", dsErr, string(dsFileC))
+	if twitterConsumerKey == "" {
+		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY")
+	}
+
+	if twitterConsumerSecret == "" {
+		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET")
+	}
+
+	if twitterAccessToken == "" {
+		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN")
+	}
+
+	if twitterAccessTokenSecret == "" {
+		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
 	}
 
 	slackBotAPI := slack.New(slackBotToken)
@@ -90,11 +102,15 @@ func main() {
 		botName = botName[1:]
 	}
 
+	anaconda.SetConsumerKey(twitterConsumerKey)
+	anaconda.SetConsumerSecret(twitterConsumerSecret)
+	twitterAPI := anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
+
 	slackBotRTM := slackBotAPI.NewRTM()
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
-	b := bot.NewBot(slackBotAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	b := bot.NewBot(slackBotAPI, twitterAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(slackBotRTM); err != nil {
 		panic(err)
 	}
@@ -119,8 +135,6 @@ func main() {
 				}
 			}
 		}
-
-		log.Fatalln("should never be reached")
 	}()
 
 	go func() {
