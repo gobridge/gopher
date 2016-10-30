@@ -29,7 +29,7 @@ spec:
          - name: healthz-port
            containerPort: 8081
            hostPort: 8081
-        ReadinessProbe:
+        readinessProbe:
           httpGet:
             path: /healthz
             port: healthz-port
@@ -49,6 +49,8 @@ spec:
         securityContext:
           privileged: false
         env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /datastore.json
           - name: GOPHERS_SLACK_BOT_NAME
             valueFrom:
               secretKeyRef:
@@ -59,5 +61,16 @@ spec:
               secretKeyRef:
                 name: gophersecret
                 key: token
-      restartPolicy: Always
+        volumeMounts:
+          - name: datastore
+            mountPath: /tmp
+            readOnly: true
+      restartPolicy: OnFailure
       dnsPolicy: ClusterFirst
+      volumes:
+        - name: datastore
+          secret:
+            secretName: gopher-datastore
+            items:
+              key: file
+              path: datastore.json
