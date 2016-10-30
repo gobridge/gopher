@@ -118,6 +118,7 @@ func (b *Bot) processCLList(lastID int) int {
 	}
 
 	if len(body) < 4 {
+		b.logf("got body: %s\n", string(body))
 		return lastID
 	}
 
@@ -151,8 +152,10 @@ func (b *Bot) processCLList(lastID int) int {
 			continue
 		}
 
-		if _, err := b.wasShown(ctx, dsClient, cl); err == nil {
-			continue
+		if shown, err := b.wasShown(ctx, dsClient, cl); err == nil {
+			if shown {
+				continue
+			}
 		} else {
 			b.logf("got error: %v\n", err)
 			continue
@@ -204,6 +207,7 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	lastID, err := b.getLastSeenCL(ctx, dsClient)
 	if err != nil {
 		b.logf("got error while loading last ID from the datastore: %v\n", err)
+		dsClient.Close()
 		return
 	}
 	dsClient.Close()
