@@ -65,10 +65,12 @@ func main() {
 		botName = "tempbot"
 	}
 
-	dsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-	fmt.Printf("got env var GOOGLE_APPLICATION_CREDENTIALS=%s\n", dsFile)
-	dsFileC, dsErr := ioutil.ReadFile(dsFile)
-	fmt.Printf("got dserr: %v\n contents: %s\n", dsErr, string(dsFileC))
+	if devMode {
+		dsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+		fmt.Printf("got env var GOOGLE_APPLICATION_CREDENTIALS=%s\n", dsFile)
+		dsFileC, dsErr := ioutil.ReadFile(dsFile)
+		fmt.Printf("got dserr: %v\n contents: %s\n", dsErr, string(dsFileC))
+	}
 
 	slackBotAPI := slack.New(slackBotToken)
 
