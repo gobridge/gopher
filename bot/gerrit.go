@@ -30,7 +30,7 @@ type (
 		} `json:"revisions"`
 	}
 
-	goCL struct {
+	storedCL struct {
 		Tweeted   bool      `datastore:"Tweeted,noindex"`
 		URL       string    `datastore:"URL,noindex"`
 		Message   string    `datastore:"Message,noindex"`
@@ -63,10 +63,10 @@ func (b *Bot) datastoreClient() (context.Context, *datastore.Client) {
 	return ctx, dsClient
 }
 
-func (b *Bot) getCLFromDS(ctx context.Context, dsClient *datastore.Client, query *datastore.Query) (*datastore.Key, *goCL, error) {
+func (b *Bot) getCLFromDS(ctx context.Context, dsClient *datastore.Client, query *datastore.Query) (*datastore.Key, *storedCL, error) {
 	iter := dsClient.Run(ctx, query)
 
-	dst := &goCL{}
+	dst := &storedCL{}
 	key, err := iter.Next(dst)
 	if err != nil && err != datastore.Done {
 		b.logf("error while fetching history: %v\n", err)
@@ -101,12 +101,18 @@ func (b *Bot) wasShown(ctx context.Context, dsClient *datastore.Client, cl gerri
 
 func (b *Bot) saveCL(ctx context.Context, dsClient *datastore.Client, cl gerritCL) error {
 	taskKey := datastore.NewKey(ctx, "GoCL", "", int64(cl.Number), nil)
-	gocl := &goCL{
+	gocl := &storedCL{
 		URL:       cl.link(),
 		Message:   cl.message(),
 		CrawledAt: time.Now(),
 	}
 	_, err := dsClient.Put(ctx, taskKey, gocl)
+	return err
+}
+
+func (b *Bot) updateCL(ctx context.Context, dsClient *datastore.Client, key *datastore.Key, cl *storedCL) error {
+	taskKey := datastore.NewKey(ctx, "GoCL", "", key.ID(), nil)
+	_, err := dsClient.Put(ctx, taskKey, cl)
 	return err
 }
 
@@ -276,7 +282,7 @@ func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
 	}
 
 	cl.Tweeted = true
-	err = b.saveCL(ctx, dsClient, cl)
+	err = b.updateCL(ctx, dsClient, key, cl)
 	if err != nil {
 		b.logf("got error while updating CL to datastore: %v", err)
 
