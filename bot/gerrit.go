@@ -191,7 +191,7 @@ func (b *Bot) processCLList(lastID int) int {
 			return lastID
 		}
 
-		_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("%s: %s", cl.message(), cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessage(b.channels["golang_cls"].slackID, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
@@ -199,7 +199,7 @@ func (b *Bot) processCLList(lastID int) int {
 
 		lastID = cl.Number
 
-		_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("%s: %s", cl.message(), cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
