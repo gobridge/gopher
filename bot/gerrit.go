@@ -11,7 +11,6 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/nlopes/slack"
-	"golang.org/x/net/context"
 )
 
 type (
@@ -51,20 +50,8 @@ func (cl *gerritCL) message() string {
 	return subject
 }
 
-func (b *Bot) DatastoreClient() (context.Context, *datastore.Client) {
-	ctx := context.Background()
-	projectID := "gopher-slack-bot"
-	dsClient, err := datastore.NewClient(ctx, projectID)
-	if err != nil {
-		b.logf("Failed to create client: %v", err)
-		panic(err)
-	}
-
-	return ctx, dsClient
-}
-
-func (b *Bot) getCLFromDS(ctx context.Context, dsClient *datastore.Client, query *datastore.Query) (*datastore.Key, *storedCL, error) {
-	iter := dsClient.Run(ctx, query)
+func (b *Bot) getCLFromDS(query *datastore.Query) (*datastore.Key, *storedCL, error) {
+	iter := b.dsClient.Run(b.ctx, query)
 
 	dst := &storedCL{}
 	key, err := iter.Next(dst)
@@ -76,13 +63,13 @@ func (b *Bot) getCLFromDS(ctx context.Context, dsClient *datastore.Client, query
 	return key, dst, nil
 }
 
-func (b *Bot) GetLastSeenCL(ctx context.Context, dsClient *datastore.Client) (int, error) {
+func (b *Bot) GetLastSeenCL() (int, error) {
 	latestCLQuery := datastore.NewQuery("GoCL").
 		Order("-CrawledAt").
 		Limit(1).
 		KeysOnly()
 
-	key, _, err := b.getCLFromDS(ctx, dsClient, latestCLQuery)
+	key, _, err := b.getCLFromDS(latestCLQuery)
 	if err != nil {
 		return -1, err
 	}
@@ -92,27 +79,27 @@ func (b *Bot) GetLastSeenCL(ctx context.Context, dsClient *datastore.Client) (in
 	return int(key.ID()), nil
 }
 
-func (b *Bot) wasShown(ctx context.Context, dsClient *datastore.Client, cl gerritCL) (bool, error) {
-	key := datastore.NewKey(ctx, "GoCL", "", int64(cl.Number), nil)
+func (b *Bot) wasShown(cl gerritCL) (bool, error) {
+	key := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
 	query := datastore.NewQuery("GoCL").Ancestor(key)
-	key, _, err := b.getCLFromDS(ctx, dsClient, query)
+	key, _, err := b.getCLFromDS(query)
 	return key != nil, err
 }
 
-func (b *Bot) saveCL(ctx context.Context, dsClient *datastore.Client, cl gerritCL) error {
-	taskKey := datastore.NewKey(ctx, "GoCL", "", int64(cl.Number), nil)
+func (b *Bot) saveCL(cl gerritCL) error {
+	taskKey := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
 	gocl := &storedCL{
 		URL:       cl.link(),
 		Message:   cl.message(),
 		CrawledAt: time.Now(),
 	}
-	_, err := dsClient.Put(ctx, taskKey, gocl)
+	_, err := b.dsClient.Put(b.ctx, taskKey, gocl)
 	return err
 }
 
-func (b *Bot) updateCL(ctx context.Context, dsClient *datastore.Client, key *datastore.Key, cl *storedCL) error {
-	taskKey := datastore.NewKey(ctx, "GoCL", "", key.ID(), nil)
-	_, err := dsClient.Put(ctx, taskKey, cl)
+func (b *Bot) updateCL(key *datastore.Key, cl *storedCL) error {
+	taskKey := datastore.NewKey(b.ctx, "GoCL", "", key.ID(), nil)
+	_, err := b.dsClient.Put(b.ctx, taskKey, cl)
 	return err
 }
 
@@ -165,15 +152,13 @@ func (b *Bot) processCLList(lastID int) int {
 		pubChannel = pubChannel[1:]
 	}
 
-	ctx, dsClient := b.DatastoreClient()
-	defer dsClient.Close()
 	for idx := foundIdx - 1; idx >= 0; idx-- {
 		cl := cls[idx]
 		if cl.Branch != "master" {
 			continue
 		}
 
-		if shown, err := b.wasShown(ctx, dsClient, cl); err == nil {
+		if shown, err := b.wasShown(cl); err == nil {
 			if shown {
 				continue
 			}
@@ -191,7 +176,7 @@ func (b *Bot) processCLList(lastID int) int {
 		params := slack.PostMessageParameters{AsUser: true}
 		params.Attachments = append(params.Attachments, msg)
 
-		err = b.saveCL(ctx, dsClient, cl)
+		err = b.saveCL(cl)
 		if err != nil {
 			b.logf("got error while saving CL to datastore: %v", err)
 			return lastID
@@ -243,12 +228,9 @@ func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
 			continue
 		}
 
-		ctx, dsClient := b.DatastoreClient()
-		defer dsClient.Close()
-
-		key := datastore.NewKey(ctx, "GoCL", "", clNumber, nil)
+		key := datastore.NewKey(b.ctx, "GoCL", "", clNumber, nil)
 		query := datastore.NewQuery("GoCL").Ancestor(key)
-		key, cl, err := b.getCLFromDS(ctx, dsClient, query)
+		key, cl, err := b.getCLFromDS(query)
 		if err != nil {
 			b.logf("error while retriving CL from the DB: %v\n", err)
 
@@ -283,7 +265,7 @@ func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
 		}
 
 		cl.Tweeted = true
-		err = b.updateCL(ctx, dsClient, key, cl)
+		err = b.updateCL(key, cl)
 		if err != nil {
 			b.logf("got error while updating CL to datastore: %v", err)
 
@@ -301,15 +283,11 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
 
-	ctx, dsClient := b.DatastoreClient()
-
-	lastID, err := b.GetLastSeenCL(ctx, dsClient)
+	lastID, err := b.GetLastSeenCL()
 	if err != nil {
 		b.logf("got error while loading last ID from the datastore: %v\n", err)
-		dsClient.Close()
 		return
 	}
-	dsClient.Close()
 
 	lastID = b.processCLList(lastID)
 	for range tk.C {

@@ -12,8 +12,10 @@ import (
 	"strconv"
 	"strings"
 
+	"cloud.google.com/go/datastore"
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/nlopes/slack"
+	"golang.org/x/net/context"
 )
 
 type (
@@ -48,6 +50,8 @@ type (
 		slackBotAPI *slack.Client
 		twitterAPI  *anaconda.TwitterApi
 		logf        Logger
+		ctx         context.Context
+		dsClient    *datastore.Client
 	}
 )
 
@@ -688,8 +692,9 @@ func (b *Bot) packageLayout(event *slack.MessageEvent) {
 }
 
 // NewBot will create a new Slack bot
-func NewBot(slackBotAPI *slack.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
+		ctx:         ctx,
 		gerritLink:  gerritLink,
 		name:        name,
 		token:       token,
@@ -698,6 +703,7 @@ func NewBot(slackBotAPI *slack.Client, twitterAPI *anaconda.TwitterApi, httpClie
 		devMode:     devMode,
 		logf:        log,
 		slackBotAPI: slackBotAPI,
+		dsClient:    dsClient,
 		twitterAPI:  twitterAPI,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),

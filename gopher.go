@@ -34,9 +34,11 @@ import (
 
 	"github.com/gopheracademy/gopher/bot"
 
+	"cloud.google.com/go/datastore"
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
+	"golang.org/x/net/context"
 )
 
 const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
@@ -110,18 +112,24 @@ func main() {
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
-	b := bot.NewBot(slackBotAPI, twitterAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	ctx := context.Background()
+	projectID := "gopher-slack-bot"
+	dsClient, err := datastore.NewClient(ctx, projectID)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	defer dsClient.Close()
+
+	b := bot.NewBot(ctx, slackBotAPI, dsClient, twitterAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(slackBotRTM); err != nil {
 		panic(err)
 	}
 
-	ctx, dsClient := b.DatastoreClient()
-	_, err := b.GetLastSeenCL(ctx, dsClient)
+	_, err = b.GetLastSeenCL()
 	if err != nil {
 		log.Printf("got error: %v\n", err)
 		panic(err)
 	}
-	dsClient.Close()
 
 	go func() {
 		<-time.After(1 * time.Second)
