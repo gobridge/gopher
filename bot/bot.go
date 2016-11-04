@@ -111,6 +111,9 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
+	if err != nil {
+		b.logf(`failed to deploy version: %s`, b.version)
+	}
 
 	return err
 }
@@ -167,7 +170,7 @@ func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 		strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">:")) ||
 		strings.HasPrefix(eventText, "gopher ") ||
 		strings.HasPrefix(eventText, "gopher: ") ||
-		event.Channel == b.channels["gopher"].slackID
+		strings.HasPrefix(event.Channel, "D") // Direct message channels always starts with 'D'
 }
 
 func (b *Bot) trimBot(msg string) string {
@@ -726,9 +729,6 @@ func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.
 			"general":    {description: "general channel", special: true},
 			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
 			"golang-cls": {description: "https://twitter.com/golang_cls", special: true},
-
-			// Do NOT touch the ID on this one
-			"gopher": {description: "direct message channel with Gopher", special: true, slackID: "D258JJQ13"},
 		},
 	}
 }
