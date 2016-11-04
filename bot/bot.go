@@ -112,10 +112,10 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
 	if err != nil {
-		b.logf("Failed to send deploy version message.")
+		b.logf(`failed to deploy version: %s`, b.version)
 	}
 
-	return nil
+	return err
 }
 
 // TeamJoined is called when the someone joins the team
