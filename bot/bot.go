@@ -334,6 +334,11 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if eventText == "avoid gotchas" {
+		b.idiomaticGo(event)
+		return
+	}
+
 	if eventText == "source code" {
 		b.sourceCode(event)
 		return
@@ -396,7 +401,9 @@ There are some awesome websites as well:
  - <https://gobyexample.com> examples of how to do things in Go
  - <http://go-database-sql.org> how to use SQL databases in Go
  - <https://dmitri.shuralyov.com/idiomatic-go> tips on how to write more idiomatic Go code
- - <http://gophervids.appspot.com> list of Go related videos from various authors
+ - <https://divan.github.io/posts/avoid_gotchas> will help you avoid gotchas in Go
+
+There's also an exhaustive list of videos <http://gophervids.appspot.com> related to Go from various authors.
 
 If you prefer books, you can try these:
  - <http://www.golangbootcamp.com/book>
@@ -655,6 +662,7 @@ func (b *Bot) help(event *slack.MessageEvent) {
 - "http timeouts" -> tutorial about dealing with timeouts and http
 - "database tutorial" -> tutorial about using sql databases
 - "package layout" -> learn how to structure your Go package
+- "avoid gotchas" -> avoid common gotchas in Go
 - "library for <name>" -> search a go package that matches <name>
 - "flip a coin" -> flip a coin
 - "source code" -> location of my source code
@@ -710,6 +718,15 @@ func (b *Bot) packageLayout(event *slack.MessageEvent) {
 func (b *Bot) idiomaticGo(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "Tips on how to write idiomatic Go code <https://dmitri.shuralyov.com/idiomatic-go>", params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
+func (b *Bot) avoidGotchas(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "Read this article if you want to understand and avoid common gotchas in Go <https://divan.github.io/posts/avoid_gotchas>", params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
