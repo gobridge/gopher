@@ -38,6 +38,10 @@ const (
 // ScopeDatastore grants permissions to view and/or manage datastore entities
 const ScopeDatastore = "https://www.googleapis.com/auth/datastore"
 
+// resourcePrefixHeader is the name of the metadata header used to indicate
+// the resource being operated on.
+const resourcePrefixHeader = "google-cloud-resource-prefix"
+
 // protoClient is an interface for *transport.ProtoClient to support injecting
 // fake clients in tests.
 type protoClient interface {
@@ -158,23 +162,6 @@ const (
 	multiArgTypeInterface
 )
 
-// nsKey is the type of the context.Context key to store the datastore
-// namespace.
-type nsKey struct{}
-
-// WithNamespace returns a new context that limits the scope its parent
-// context with a Datastore namespace.
-func WithNamespace(parent context.Context, namespace string) context.Context {
-	return context.WithValue(parent, nsKey{}, namespace)
-}
-
-// ctxNamespace returns the active namespace for a context.
-// It defaults to "" if no namespace was specified.
-func ctxNamespace(ctx context.Context) string {
-	v, _ := ctx.Value(nsKey{}).(string)
-	return v
-}
-
 // ErrFieldMismatch is returned when a field is to be loaded into a different
 // type than the one it was stored from, or when a field is missing or
 // unexported in the destination struct.
@@ -209,22 +196,22 @@ func keyToProto(k *Key) *pb.Key {
 	// TODO(jbd): Eliminate unrequired allocations.
 	var path []*pb.Key_PathElement
 	for {
-		el := &pb.Key_PathElement{Kind: k.kind}
-		if k.id != 0 {
-			el.IdType = &pb.Key_PathElement_Id{k.id}
-		} else if k.name != "" {
-			el.IdType = &pb.Key_PathElement_Name{k.name}
+		el := &pb.Key_PathElement{Kind: k.Kind}
+		if k.ID != 0 {
+			el.IdType = &pb.Key_PathElement_Id{k.ID}
+		} else if k.Name != "" {
+			el.IdType = &pb.Key_PathElement_Name{k.Name}
 		}
 		path = append([]*pb.Key_PathElement{el}, path...)
-		if k.parent == nil {
+		if k.Parent == nil {
 			break
 		}
-		k = k.parent
+		k = k.Parent
 	}
 	key := &pb.Key{Path: path}
-	if k.namespace != "" {
+	if k.Namespace != "" {
 		key.PartitionId = &pb.PartitionId{
-			NamespaceId: k.namespace,
+			NamespaceId: k.Namespace,
 		}
 	}
 	return key
@@ -241,11 +228,11 @@ func protoToKey(p *pb.Key) (*Key, error) {
 	}
 	for _, el := range p.Path {
 		key = &Key{
-			namespace: namespace,
-			kind:      el.Kind,
-			id:        el.GetId(),
-			name:      el.GetName(),
-			parent:    key,
+			Namespace: namespace,
+			Kind:      el.Kind,
+			ID:        el.GetId(),
+			Name:      el.GetName(),
+			Parent:    key,
 		}
 	}
 	if !key.valid() { // Also detects key == nil.
@@ -339,8 +326,8 @@ func checkMultiArg(v reflect.Value) (m multiArgType, elemType reflect.Type) {
 }
 
 // Close closes the Client.
-func (c *Client) Close() {
-	c.conn.Close()
+func (c *Client) Close() error {
+	return c.conn.Close()
 }
 
 // Get loads the entity stored for key into dst, which must be a struct pointer

@@ -102,6 +102,8 @@ type Query struct {
 	start    []byte
 	end      []byte
 
+	namespace string
+
 	trans *Transaction
 
 	err error
@@ -139,6 +141,17 @@ func (q *Query) Ancestor(ancestor *Key) *Query {
 func (q *Query) EventualConsistency() *Query {
 	q = q.clone()
 	q.eventual = true
+	return q
+}
+
+// Namespace returns a derivative query that is associated with the given
+// namespace.
+//
+// A namespace may be used to partition data for multi-tenant applications.
+// For details, see https://cloud.google.com/datastore/docs/concepts/multitenancy.
+func (q *Query) Namespace(ns string) *Query {
+	q = q.clone()
+	q.namespace = ns
 	return q
 }
 
@@ -431,7 +444,7 @@ func (c *Client) Count(ctx context.Context, q *Query) (int, error) {
 	n := 0
 	for {
 		err := it.nextBatch()
-		if err == Done {
+		if err == iterator.Done {
 			return n, nil
 		}
 		if err != nil {
@@ -483,7 +496,7 @@ func (c *Client) GetAll(ctx context.Context, q *Query, dst interface{}) ([]*Key,
 	var keys []*Key
 	for t := c.Run(ctx, q); ; {
 		k, e, err := t.next()
-		if err == Done {
+		if err == iterator.Done {
 			break
 		}
 		if err != nil {
@@ -544,11 +557,12 @@ func (c *Client) Run(ctx context.Context, q *Query) *Iterator {
 			ProjectId: c.dataset,
 		},
 	}
-	if ns := ctxNamespace(ctx); ns != "" {
+	if q.namespace != "" {
 		t.req.PartitionId = &pb.PartitionId{
-			NamespaceId: ns,
+			NamespaceId: q.namespace,
 		}
 	}
+
 	if err := q.toProto(t.req); err != nil {
 		t.err = err
 	}
@@ -584,11 +598,8 @@ type Iterator struct {
 	entityCursor []byte
 }
 
-// Done is returned when a query iteration has completed.
-var Done = iterator.Done
-
 // Next returns the key of the next result. When there are no more results,
-// Done is returned as the error.
+// iterator.Done is returned as the error.
 //
 // If the query is not keys only and dst is non-nil, it also loads the entity
 // stored for that key into the struct pointer or PropertyLoadSaver dst, with
@@ -634,7 +645,7 @@ func (t *Iterator) next() (*Key, *pb.Entity, error) {
 // nextBatch makes a single call to the server for a batch of results.
 func (t *Iterator) nextBatch() error {
 	if t.limit == 0 {
-		return Done // Short-circuits the zero-item response.
+		return iterator.Done // Short-circuits the zero-item response.
 	}
 
 	// Adjust the query with the latest start cursor, limit and offset.
@@ -702,7 +713,7 @@ func (t *Iterator) Cursor() (Cursor, error) {
 		t.err = t.nextBatch()
 	}
 
-	if t.err != nil && t.err != Done {
+	if t.err != nil && t.err != iterator.Done {
 		return Cursor{}, t.err
 	}
 
