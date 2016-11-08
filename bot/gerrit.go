@@ -11,6 +11,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/nlopes/slack"
+	"google.golang.org/api/iterator"
 )
 
 type (
@@ -55,7 +56,7 @@ func (b *Bot) getCLFromDS(query *datastore.Query) (*datastore.Key, *storedCL, er
 
 	dst := &storedCL{}
 	key, err := iter.Next(dst)
-	if err != nil && err != datastore.Done {
+	if err != nil && err != iterator.Done {
 		b.logf("error while fetching history: %v\n", err)
 		return nil, nil, err
 	}
@@ -76,18 +77,18 @@ func (b *Bot) GetLastSeenCL() (int, error) {
 	if key == nil {
 		return -1, nil
 	}
-	return int(key.ID()), nil
+	return int(key.ID), nil
 }
 
 func (b *Bot) wasShown(cl gerritCL) (bool, error) {
-	key := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
+	key := datastore.IDKey("GoCL", int64(cl.Number), nil)
 	query := datastore.NewQuery("GoCL").Ancestor(key)
 	key, _, err := b.getCLFromDS(query)
 	return key != nil, err
 }
 
 func (b *Bot) saveCL(cl gerritCL) error {
-	taskKey := datastore.NewKey(b.ctx, "GoCL", "", int64(cl.Number), nil)
+	taskKey := datastore.IDKey("GoCL", int64(cl.Number), nil)
 	gocl := &storedCL{
 		URL:       cl.link(),
 		Message:   cl.message(),
@@ -98,7 +99,7 @@ func (b *Bot) saveCL(cl gerritCL) error {
 }
 
 func (b *Bot) updateCL(key *datastore.Key, cl *storedCL) error {
-	taskKey := datastore.NewKey(b.ctx, "GoCL", "", key.ID(), nil)
+	taskKey := datastore.IDKey("GoCL", key.ID, nil)
 	_, err := b.dsClient.Put(b.ctx, taskKey, cl)
 	return err
 }
@@ -228,7 +229,7 @@ func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
 			continue
 		}
 
-		key := datastore.NewKey(b.ctx, "GoCL", "", clNumber, nil)
+		key := datastore.IDKey("GoCL", clNumber, nil)
 		query := datastore.NewQuery("GoCL").Ancestor(key)
 		key, cl, err := b.getCLFromDS(query)
 		if err != nil {
