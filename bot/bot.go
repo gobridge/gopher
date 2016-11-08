@@ -395,6 +395,7 @@ There are some awesome websites as well:
  - <http://gotime.fm> awesome weekly podcast of Go awesomeness
  - <https://gobyexample.com> examples of how to do things in Go
  - <http://go-database-sql.org> how to use SQL databases in Go
+ - <https://dmitri.shuralyov.com/idiomatic-go> tips on how to write more idiomatic Go code
  - <http://gophervids.appspot.com> list of Go related videos from various authors
 
 If you prefer books, you can try these:
@@ -649,12 +650,14 @@ func (b *Bot) help(event *slack.MessageEvent) {
 - "recommended channels" -> get a list of recommended channels
 - "oss help" -> help the open-source community
 - "work with forks" -> how to work with forks of packages
+- "idiomatic go" -> learn how to write more idiomatic Go code
 - "block forever" -> how to block forever
 - "http timeouts" -> tutorial about dealing with timeouts and http
 - "database tutorial" -> tutorial about using sql databases
 - "package layout" -> learn how to structure your Go package
 - "library for <name>" -> search a go package that matches <name>
 - "flip a coin" -> flip a coin
+- "source code" -> location of my source code
 - "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher
 `,
 	}
