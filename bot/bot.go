@@ -335,7 +335,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	if eventText == "avoid gotchas" {
-		b.idiomaticGo(event)
+		b.avoidGotchas(event)
 		return
 	}
 
