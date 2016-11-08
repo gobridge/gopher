@@ -329,6 +329,16 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if eventText == "idiomatic go" {
+		b.idiomaticGo(event)
+		return
+	}
+
+	if eventText == "source code" {
+		b.sourceCode(event)
+		return
+	}
+
 	if strings.HasPrefix(eventText, "library for") {
 		b.searchLibrary(event)
 		return
@@ -688,6 +698,24 @@ func (b *Bot) replyFlipCoin(event *slack.MessageEvent) {
 func (b *Bot) packageLayout(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "This article will explain how to organize your Go packages <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>", params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
+func (b *Bot) idiomaticGo(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "Tips on how to write idiomatic Go code <https://dmitri.shuralyov.com/idiomatic-go>", params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
+func (b *Bot) sourceCode(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "My source code is here <https://github.com/gopheracademy/gopher>", params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
