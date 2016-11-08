@@ -83,6 +83,8 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 		return errors.New("could not find bot in the list of names, check if the bot is called \"" + b.name + "\" ")
 	}
 
+	users = nil
+
 	b.logf("Determining channels ID\n")
 	publicChannels, err := b.slackBotAPI.GetChannels(true)
 	if err != nil {
@@ -97,6 +99,8 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 		}
 	}
 
+	publicChannels = nil
+
 	b.logf("Determining groups ID\n")
 	botGroups, err := b.slackBotAPI.GetGroups(true)
 	for _, group := range botGroups {
@@ -107,7 +111,9 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 		}
 	}
 
-	b.logf("Initialized %s with ID: %s and channel ID: %s\n", b.name, b.id, b.channels["gopher"].slackID)
+	botGroups = nil
+
+	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
 
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
