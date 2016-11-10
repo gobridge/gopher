@@ -192,8 +192,7 @@ func (b *Bot) trimBot(msg string) string {
 // limit access to certain functionality
 func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent) bool {
 	if restriction == "golang_cls" {
-		return event.Channel == b.channels["golang_cls"].slackID &&
-			(event.User == b.users["dlsniper"] || event.User == b.users["dominikh"])
+		return event.Channel == b.channels["golang_cls"].slackID
 	}
 
 	return false
