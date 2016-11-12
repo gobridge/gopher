@@ -155,9 +155,6 @@ func (b *Bot) processCLList(lastID int) int {
 
 	for idx := foundIdx - 1; idx >= 0; idx-- {
 		cl := cls[idx]
-		if cl.Branch != "master" {
-			continue
-		}
 
 		if shown, err := b.wasShown(cl); err == nil {
 			if shown {
