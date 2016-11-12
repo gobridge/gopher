@@ -39,7 +39,7 @@ type (
 )
 
 func (cl *gerritCL) link() string {
-	return fmt.Sprintf("https://go-review.googlesource.com/c/%d/", cl.Number)
+	return fmt.Sprintf("https://golang.org/cl/%d/", cl.Number)
 }
 
 func (cl *gerritCL) message() string {
