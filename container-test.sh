@@ -15,7 +15,7 @@ docker run --rm \
     -e CI=true \
     -e GOPATH=${CONTAINER_PROJECT_GOPATH} \
     -w "${CONTAINER_PROJECT_DIR}" \
-    golang:1.8beta2 \
+    golang:1.8rc2-alpine \
     go test -v -race -tags netgo -installsuffix netgo ./... 2> output.log
 
 EXIT_CODE=$?

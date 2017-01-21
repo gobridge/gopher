@@ -1,4 +1,4 @@
-FROM alpine:3.4
+FROM alpine:3.5
 MAINTAINER Florin Patan "florinpatan@gmail.com"
 
 WORKDIR /
