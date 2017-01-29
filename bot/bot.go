@@ -579,7 +579,7 @@ func (b *Bot) dealWithHTTPTimeouts(event *slack.MessageEvent) {
 
 func (b *Bot) sliceUsageAndInternals(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<https://blog.golang.org/go-slices-usage-and-internals/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<https://blog.golang.org/go-slices-usage-and-internals>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
