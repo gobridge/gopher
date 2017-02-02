@@ -336,6 +336,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	if strings.HasPrefix(eventText, "xkcd:") {
 		b.xkcdAll(event)
+		return
 	}
 
 	if eventText == "package layout" {
