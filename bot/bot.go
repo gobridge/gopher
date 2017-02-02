@@ -309,6 +309,11 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if eventText == "slices" {
+		b.sliceUsageAndInternals(event)
+		return
+	}
+
 	if eventText == "database tutorial" {
 		b.goDatabaseTutorial(event)
 		return
@@ -566,6 +571,15 @@ func (b *Bot) goDatabaseTutorial(event *slack.MessageEvent) {
 func (b *Bot) dealWithHTTPTimeouts(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
+func (b *Bot) sliceUsageAndInternals(event *slack.MessageEvent) {
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<https://blog.golang.org/go-slices-usage-and-internals>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
