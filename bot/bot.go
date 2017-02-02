@@ -334,6 +334,10 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.HasPrefix(eventText, "xkcd:") {
+		b.xkcdAll(event)
+	}
+
 	if eventText == "package layout" {
 		b.packageLayout(event)
 		return
@@ -628,6 +632,28 @@ func (b *Bot) searchLibrary(event *slack.MessageEvent) {
 func (b *Bot) xkcd(event *slack.MessageEvent, imageLink string) {
 	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
+func (b *Bot) xkcdAll(event *slack.MessageEvent) {
+	eventText := strings.ToLower(event.Text)
+
+	// Verify it's an integer to be nice to XKCD
+	eventText = strings.TrimPrefix(eventText, "xkcd:")
+	num, err := strconv.Atoi(eventText)
+	if err != nil {
+		// pretend we didn't hear them if they give bad data
+		b.logf("Error while attempting to parse XKCD string: %v\n", err)
+		return
+	}
+
+	imageLink := fmt.Sprintf("https://xkcd.com/%d/", num)
+
+	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
+	_, _, err = b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
