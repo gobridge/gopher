@@ -335,7 +335,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.HasPrefix(eventText, "xkcd:") {
-		b.xkcdAll(event)
+		b.xkcdAll(eventText, event)
 		return
 	}
 
@@ -639,11 +639,8 @@ func (b *Bot) xkcd(event *slack.MessageEvent, imageLink string) {
 	}
 }
 
-func (b *Bot) xkcdAll(event *slack.MessageEvent) {
-	eventText := strings.ToLower(event.Text)
-
+func (b *Bot) xkcdAll(eventText string, event *slack.MessageEvent) {
 	// Verify it's an integer to be nice to XKCD
-	eventText = strings.TrimPrefix(eventText, "xkcd:")
 	num, err := strconv.Atoi(eventText)
 	if err != nil {
 		// pretend we didn't hear them if they give bad data
