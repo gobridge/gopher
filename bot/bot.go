@@ -640,6 +640,7 @@ func (b *Bot) xkcd(event *slack.MessageEvent, imageLink string) {
 }
 
 func (b *Bot) xkcdAll(eventText string, event *slack.MessageEvent) {
+	eventText = strings.TrimPrefix(eventText, "xkcd:")
 	// Verify it's an integer to be nice to XKCD
 	num, err := strconv.Atoi(eventText)
 	if err != nil {
