@@ -204,7 +204,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	eventText := strings.ToLower(event.Text)
+	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
 
 	if b.devMode {
 		b.logf("%#v\n", *event)
