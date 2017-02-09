@@ -649,7 +649,7 @@ func (b *Bot) xkcdAll(eventText string, event *slack.MessageEvent) {
 		return
 	}
 
-	imageLink := fmt.Sprintf("https://xkcd.com/%d/", num)
+	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", num)
 
 	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
 	_, _, err = b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
