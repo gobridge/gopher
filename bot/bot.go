@@ -229,6 +229,11 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if strings.Contains(eventText, "ghost") {
+		b.reactToEvent(event, "ghost")
+		return
+	}
+
 	if strings.Contains(eventText, "ermergerd") ||
 		strings.Contains(eventText, "ermahgerd") {
 		b.reactToEvent(event, "dragon")
