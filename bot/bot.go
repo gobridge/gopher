@@ -299,7 +299,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	if eventText == "work with forks" {
+	if eventText == "work with forks" ||
+		eventText == "working with forks" {
 		b.goForks(event)
 		return
 	}
@@ -553,7 +554,7 @@ func (b *Bot) ossHelp(event *slack.MessageEvent) {
 
 func (b *Bot) goForks(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's how to work with package forks in Go: <http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -562,7 +563,7 @@ func (b *Bot) goForks(event *slack.MessageEvent) {
 
 func (b *Bot) goBlockForever(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's how to block forever in Go: <http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -571,7 +572,7 @@ func (b *Bot) goBlockForever(event *slack.MessageEvent) {
 
 func (b *Bot) goDatabaseTutorial(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<http://go-database-sql.org/>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's how to work with database/sql in Go: <http://go-database-sql.org/>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -589,7 +590,11 @@ func (b *Bot) dealWithHTTPTimeouts(event *slack.MessageEvent) {
 
 func (b *Bot) sliceUsageAndInternals(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<https://blog.golang.org/go-slices-usage-and-internals>`, params)
+	message := `The following posts will explain how slices, maps and strings work in Go:
+- <https://blog.golang.org/slices>
+- <https://blog.golang.org/go-slices-usage-and-internals>
+- <https://blog.golang.org/strings>`
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, message, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -657,7 +662,7 @@ func (b *Bot) xkcdAll(eventText string, event *slack.MessageEvent) {
 	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", num)
 
 	params := slack.PostMessageParameters{
-		AsUser: true,
+		AsUser:      true,
 		UnfurlLinks: true,
 		UnfurlMedia: true,
 	}
@@ -761,7 +766,14 @@ func (b *Bot) replyFlipCoin(event *slack.MessageEvent) {
 
 func (b *Bot) packageLayout(event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "This article will explain how to organize your Go packages <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>", params)
+	message := `These articles will explain how to organize your Go packages:
+- <https://rakyll.org/style-packages/>
+- <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>
+- <https://peter.bourgon.org/go-best-practices-2016/#repository-structure>
+
+This article will help you understand the design philosophy for packages: <https://www.goinggo.net/2017/02/design-philosophy-on-packaging.html>`
+
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, message, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -825,11 +837,12 @@ func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.
 			"devops":      {description: "for devops related discussions"},
 			"security":    {description: "for security related discussions"},
 			"aws":         {description: "if you are interested in AWS"},
+			"goreviews":   {description: "talk to the Go team about a certain CL"},
+			"golang-cls":  {description: "get real time udates from the merged CL for Go itself. For a currated list of important / interesting messages follow: https://twitter.com/golang_cls"},
 			"bbq":         {description: "Go controlling your bbq grill? Yes, we have that"},
 
 			"general":    {description: "general channel", special: true},
 			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
-			"golang-cls": {description: "https://twitter.com/golang_cls", special: true},
 		},
 	}
 }
