@@ -1,8 +1,8 @@
 steps:
-- name: 'golang:1.8-alpine'
+- name: 'gcr.io/cloud-builders/go'
+  tags: ['alpine', 'latest']
   args: ['go', 'build', '-tags', 'netgo', '-installsuffix', 'netgo', '-ldflags', "-X main.botVersion=${REVISION_ID}", '-o', 'gopher', 'github.com/gopheracademy/gopher']
-  env: ['CGO_ENABLED=0']
-
+  env: ['CGO_ENABLED=0', 'PROJECT_ROOT=github.com/gopheracademy/gopher']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '--tag=gcr.io/$PROJECT_ID/bot/$REVISION_ID', '.']
 images: ['gcr.io/$PROJECT_ID/cb-bot/$REVISION_ID']
