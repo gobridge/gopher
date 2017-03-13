@@ -256,11 +256,17 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	// TODO should we check for ``` or messages of a certain length?
 	if !strings.Contains(eventText, "nolink") &&
 		event.File != nil &&
 		(event.File.Filetype == "go" || event.File.Filetype == "text") {
 		b.suggestPlayground(event)
+		return
+	}
+
+	// We assume that the user actually wanted to have a code snippet shared
+	if !strings.HasPrefix(eventText, "nolink") &&
+		strings.Count(eventText, "\n") > 9 {
+		b.suggestPlayground2(event)
 		return
 	}
 
@@ -536,7 +542,71 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 		return
 	}
 
-	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To enable collaboration and make this easier to get help, please consider using: <https://play.golang.org>. If you wish to not link against the playground, please use "nolink" in the message. Thank you.`, params)
+	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To facilitate collaboration and make this easier for others to share back the snippet, please consider using: <https://play.golang.org>. If you wish to not link against the playground, please use "nolink" in the message. Thank you.`, params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
+func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
+	originalEventText := event.Text
+	eventText := ""
+
+	// Be nice and try to first figure out if there's any possible code in there
+	for dotPos := strings.Index(originalEventText, "```"); dotPos != -1;  dotPos = strings.Index(originalEventText, "```") {
+		originalEventText = originalEventText[dotPos+3:]
+		nextTripleDots := strings.Index(eventText, "```")
+		if nextTripleDots == -1 {
+			eventText += originalEventText
+		} else {
+			eventText += originalEventText[:nextTripleDots]
+			originalEventText = originalEventText[nextTripleDots+3:]
+		}
+	}
+
+	// Well there 's so much we can do here, the user really should have a better etiquette and not post walls of text
+	if eventText == "" {
+		eventText = originalEventText
+	}
+
+	requestBody := bytes.NewBufferString(eventText)
+
+	req, err := http.NewRequest("POST", "https://play.golang.org/share", requestBody)
+	if err != nil {
+		b.logf("failed to get playground link: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	req.Header.Add("User-Agent", "Gophers Slack bot")
+	req.Header.Add("Content-Length", strconv.Itoa(len(eventText)))
+
+	resp, err := b.client.Do(req)
+	if err != nil {
+		b.logf("failed to get playground link: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		b.logf("got non-200 response: %v", resp.StatusCode)
+		return
+	}
+
+	linkID, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		b.logf("failed to get playground link: %v", err)
+		return
+	}
+
+	params := slack.PostMessageParameters{AsUser: true}
+	_, _, err = b.slackBotAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+
+	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you've wrote a large block of text (more than 9 lines). To make the conversation easier to follow the conversation and facilitate collaboration, please consider using: <https://play.golang.org> if you shared code. If you wish to not link against the playground, please start the message with "nolink". Thank you.`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
