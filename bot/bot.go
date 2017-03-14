@@ -583,6 +583,7 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
 	eventText := ""
 
 	// Be nice and try to first figure out if there's any possible code in there
+	/* This has a bug so don't be nice for now
 	for dotPos := strings.Index(originalEventText, "```"); dotPos != -1;  dotPos = strings.Index(originalEventText, "```") {
 		originalEventText = originalEventText[dotPos+3:]
 		nextTripleDots := strings.Index(eventText, "```")
@@ -593,6 +594,7 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
 			originalEventText = originalEventText[nextTripleDots+3:]
 		}
 	}
+	*/
 
 	// Well there 's so much we can do here, the user really should have a better etiquette and not post walls of text
 	if eventText == "" {
