@@ -299,6 +299,12 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	if eventText == "recommended blogs" ||
+		eventText == "recommended" {
+		b.recommendedBlogs(event)
+		return
+	}
+
 	if eventText == "oss help" ||
 		eventText == "oss help wanted" {
 		b.ossHelp(event)
@@ -474,6 +480,29 @@ func (b *Bot) recommendedChannels(event *slack.MessageEvent) {
 		return
 	}
 }
+
+func (b *Bot) recommendedBlogs(event *slack.MessageEvent) {
+	message := slack.Attachment{}
+
+	message.Text = `Here are some popular blog posts and Twitter accounts you should follow:
+- Peter Bourgon <https://twitter.com/peterbourgon|@peterbourgon> - <https://peter.bourgon.org/blog>
+- Carlisia Campos <https://twitter.com/carlisia|@carlisia>
+- Dave Cheney <https://twitter.com/davecheney|@davecheney> - <http://dave.cheney.net>
+- Jaana Burcu Dogan <https://twitter.com/rakyll|@rakyll> - <http://golang.rakyll.org>
+- Jessie Frazelle <https://twitter.com/jessfraz|@jessfraz> - <https://blog.jessfraz.com>
+- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>
+- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>
+`
+
+	params := slack.PostMessageParameters{AsUser: true}
+	params.Attachments = []slack.Attachment{message}
+	_, _, err := b.slackBotAPI.PostMessage(event.User, "Here is a list of recommended channels:", params)
+	if err != nil {
+		b.logf("%s\n", err)
+		return
+	}
+}
+
 
 func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 	if event.File == nil {
