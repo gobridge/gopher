@@ -515,7 +515,7 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 		return
 	}
 
-	if info.Lines < 6 {
+	if info.Lines < 6 || info.PrettyType == "Plain Text" {
 		return
 	}
 
