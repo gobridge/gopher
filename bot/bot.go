@@ -401,10 +401,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
-		var response string
-		for _, line := range responseLines {
-			response += line + "\n"
-		}
+		response := strings.Join(responseLines, "\n")
 		respond(b, event, response)
 		return
 	}
@@ -412,10 +409,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	// aliases for the above canned responses
 	if key, ok := botEventTextToResponseAliases[eventText]; ok {
 		if responseLines, ok := botEventTextToResponse[key]; ok {
-			var response string
-			for _, line := range responseLines {
-				response += line + "\n"
-			}
+			response := strings.Join(responseLines, "\n")
 			respond(b, event, response)
 			return
 		}
@@ -702,7 +696,7 @@ var xkcdAliases = map[string]int{
 func xkcd(b *Bot, event *slack.MessageEvent) {
 	// repeats some earlier work but oh well
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
-	eventText = b.trimBot(event.Text)
+	eventText = b.trimBot(eventText)
 	eventText = strings.TrimPrefix(eventText, "xkcd:")
 
 	// first check known aliases for certain comics
