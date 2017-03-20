@@ -200,7 +200,12 @@ func (b *Bot) processCLList(lastID int) int {
 	return lastID
 }
 
-func (b *Bot) shareCL(event *slack.MessageEvent, eventText string) {
+func shareCL(b *Bot, event *slack.MessageEvent) {
+	// repeats some earlier work but oh well
+	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
+	eventText = b.trimBot(event.Text)
+	eventText = strings.TrimPrefix(eventText, "xkcd:")
+
 	if !b.specialRestrictions("golang_cls", event) {
 		b.logf("share attempt caught: %#v\n", event)
 
