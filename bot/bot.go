@@ -191,7 +191,7 @@ func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 }
 
 func (b *Bot) trimBot(msg string) string {
-	msg = strings.Replace(msg, b.msgprefix, "", 1)
+	msg = strings.Replace(msg, strings.ToLower(b.msgprefix), "", 1)
 	msg = strings.TrimLeft(msg, "gopher")
 	msg = strings.Trim(msg, " :\n")
 
