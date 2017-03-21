@@ -210,14 +210,14 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 var (
 	// Generic responses to all messages
 	containsToReactions = map[string][]string{
-		"︵": []string{"┬─┬ノ( º _ ºノ)"},
-		"彡": []string{"┬─┬ノ( º _ ºノ)"},
-		"my adorable little gophers": []string{"gopher"},
-		"bbq":       []string{"bbqgopher"},
-		"ghost":     []string{"ghost"},
-		"ermergerd": []string{"dragon"},
-		"ermahgerd": []string{"dragon"},
-		"beer me":   []string{"beer", "beers"},
+		"︵": {"┬─┬ノ( º _ ºノ)"},
+		"彡": {"┬─┬ノ( º _ ºノ)"},
+		"my adorable little gophers": {"gopher"},
+		"bbq":       {"bbqgopher"},
+		"ghost":     {"ghost"},
+		"ermergerd": {"dragon"},
+		"ermahgerd": {"dragon"},
+		"beer me":   {"beer", "beers"},
 	}
 
 	// Bot-directed message reactions / responses from here down
@@ -231,7 +231,7 @@ var (
 	}
 
 	botEventTextToResponse = map[string][]string{
-		"recommended blogs": []string{
+		"recommended blogs": {
 			`Here are some popular blog posts and Twitter accounts you should follow:`,
 			`- Peter Bourgon <https://twitter.com/peterbourgon|@peterbourgon> - <https://peter.bourgon.org/blog>`,
 			`- Carlisia Campos <https://twitter.com/carlisia|@carlisia>`,
@@ -241,28 +241,28 @@ var (
 			`- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>`,
 			`- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>`,
 		},
-		"oss help wanted": []string{
+		"oss help wanted": {
 			`Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`,
 		},
-		"working with forks": []string{
+		"working with forks": {
 			`Here's how to work with package forks in Go: <http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`,
 		},
-		"block forever": []string{
+		"block forever": {
 			`Here's how to block forever in Go: <http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`,
 		},
-		"http timeouts": []string{
+		"http timeouts": {
 			`Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`,
 		},
-		"slices": []string{
+		"slices": {
 			`The following posts will explain how slices, maps and strings work in Go:`,
 			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/go-slices-usage-and-internals>`,
 			`- <https://blog.golang.org/strings>`,
 		},
-		"database tutorial": []string{
+		"database tutorial": {
 			`Here's how to work with database/sql in Go: <http://go-database-sql.org/>`,
 		},
-		"package layout": []string{
+		"package layout": {
 			`These articles will explain how to organize your Go packages:`,
 			`- <https://rakyll.org/style-packages/>`,
 			`- <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>`,
@@ -270,21 +270,21 @@ var (
 			``,
 			`This article will help you understand the design philosophy for packages: <https://www.goinggo.net/2017/02/design-philosophy-on-packaging.html>`,
 		},
-		"idiomatic go": []string{
+		"idiomatic go": {
 			`Tips on how to write idiomatic Go code <https://dmitri.shuralyov.com/idiomatic-go>`,
 		},
-		"avoid gotchas": []string{
+		"avoid gotchas": {
 			`Read this article if you want to understand and avoid common gotchas in Go <https://divan.github.io/posts/avoid_gotchas>`,
 		},
-		"source code": []string{
+		"source code": {
 			`My source code is here <https://github.com/gopheracademy/gopher>`,
 		},
-		"stack": []string{
+		"stack": {
 			`I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>.`,
 			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
 			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
 		},
-		"help": []string{
+		"help": {
 			`Here's a list of supported commands`,
 			`- "newbie resources" -> get a list of newbie resources`,
 			`- "newbie resources pvt" -> get a list of newbie resources as a private message`,
@@ -323,13 +323,13 @@ var (
 	}
 
 	botContainsToReactions = map[string][]string{
-		"thank":  []string{"gopher"},
-		"cheers": []string{"gopher"},
-		"hello":  []string{"gopher"},
+		"thank":  {"gopher"},
+		"cheers": {"gopher"},
+		"hello":  {"gopher"},
 	}
 
 	botHasPrefixToReactions = map[string][]string{
-		"wave": []string{"wave", "gopher"},
+		"wave": {"wave", "gopher"},
 	}
 )
 
