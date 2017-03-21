@@ -192,7 +192,7 @@ func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 
 func (b *Bot) trimBot(msg string) string {
 	msg = strings.Replace(msg, strings.ToLower(b.msgprefix), "", 1)
-	msg = strings.TrimLeft(msg, "gopher")
+	msg = strings.TrimPrefix(msg, "gopher")
 	msg = strings.Trim(msg, " :\n")
 
 	return msg
@@ -218,6 +218,11 @@ var (
 		"ermergerd": {"dragon"},
 		"ermahgerd": {"dragon"},
 		"beer me":   {"beer", "beers"},
+	}
+
+	reactWithMessage = map[string]struct{}{
+		"︵": {},
+		"彡": {},
 	}
 
 	// Bot-directed message reactions / responses from here down
@@ -343,7 +348,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	if b.devMode {
 		b.logf("%#v\n", *event)
-		b.logf("got message: %s\nisBotMessage: %t\n", eventText, b.isBotMessage(event, eventText))
+		b.logf("got message: %s\n", eventText)
+		b.logf("isBotMessage: %t\n", b.isBotMessage(event, eventText))
 		b.logf("channel: %s -> message: %q\n", event.Channel, b.trimBot(eventText))
 		return
 	}
@@ -352,8 +358,14 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	// that contain a certain string
 	for needle, reactions := range containsToReactions {
 		if strings.Contains(eventText, needle) {
-			for _, reaction := range reactions {
-				b.reactToEvent(event, reaction)
+			if _, ok := reactWithMessage[needle]; ok {
+				for _, reaction := range reactions {
+					respond(b, event , reaction)
+				}
+			} else {
+				for _, reaction := range reactions {
+					b.reactToEvent(event, reaction)
+				}
 			}
 			return
 		}
@@ -399,12 +411,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	// More responses that need some logic behind them
-	if responseFunc, ok := botPrefixToFunc[eventText]; ok {
-		responseFunc(b, event)
-		return
-	}
-
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
 		response := strings.Join(responseLines, "\n")
@@ -421,6 +427,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		}
 
 		b.logf("Bad response alias: %v", eventText)
+		return
 	}
 
 	// Reacting based on if the message contains a needle
@@ -439,6 +446,14 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 			for _, reaction := range reactions {
 				b.reactToEvent(event, reaction)
 			}
+			return
+		}
+	}
+
+	// More responses that need some logic behind them
+	for prefix, responseFunc := range botPrefixToFunc {
+		if strings.HasPrefix(eventText, prefix) {
+			responseFunc(b, event)
 			return
 		}
 	}
@@ -516,7 +531,7 @@ func recommendedChannels(b *Bot, event *slack.MessageEvent) {
 }
 
 func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
-	if event.File == nil {
+	if event.File == nil || b.devMode {
 		return
 	}
 
@@ -590,6 +605,10 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 }
 
 func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
+	if b.devMode {
+		return
+	}
+
 	originalEventText := event.Text
 	eventText := ""
 
@@ -656,6 +675,10 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
 }
 
 func respond(b *Bot, event *slack.MessageEvent, response string) {
+	if b.devMode {
+		b.logf("should reply to message %s with %s\n", event.Text, response)
+		return
+	}
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, response, params)
 	if err != nil {
@@ -729,7 +752,7 @@ func xkcd(b *Bot, event *slack.MessageEvent) {
 	}
 	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
 	if err != nil {
-		b.logf("%s\n", err)
+		b.logf("error while sending xkcd message: %s\n", err)
 		return
 	}
 }
@@ -749,6 +772,10 @@ func (b *Bot) godoc(event *slack.MessageEvent, prefix string, position int) {
 }
 
 func (b *Bot) reactToEvent(event *slack.MessageEvent, reaction string) {
+	if b.devMode {
+		b.logf("should reply to message %s with %s\n", event.Text, reaction)
+		return
+	}
 	item := slack.ItemRef{
 		Channel:   event.Channel,
 		Timestamp: event.Timestamp,
