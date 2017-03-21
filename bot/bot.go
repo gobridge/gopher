@@ -37,6 +37,7 @@ type (
 	// Bot structure
 	Bot struct {
 		id          string
+		msgprefix   string
 		gerritLink  string
 		name        string
 		token       string
@@ -82,6 +83,8 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	if b.id == "" {
 		return errors.New("could not find bot in the list of names, check if the bot is called \"" + b.name + "\" ")
 	}
+
+	b.msgprefix = strings.ToLower("<@" + b.id + ">")
 
 	users = nil
 
@@ -172,20 +175,26 @@ Now, enjoy the community and have fun.`
 }
 
 func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
-	return strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">")) ||
-		strings.HasPrefix(eventText, strings.ToLower("<@"+b.id+">:")) ||
-		strings.HasPrefix(eventText, "gopher ") ||
-		strings.HasPrefix(eventText, "gopher: ") ||
-		strings.HasPrefix(event.Channel, "D") // Direct message channels always starts with 'D'
+	prefixes := []string{
+		b.msgprefix,
+		"gopher",
+	}
+
+	for _, p := range prefixes {
+		if strings.HasPrefix(eventText, p) {
+			return true
+		}
+	}
+
+	// Direct message channels always starts with 'D'
+	return strings.HasPrefix(event.Channel, "D")
 }
 
 func (b *Bot) trimBot(msg string) string {
-	msg = strings.Replace(msg, strings.ToLower("<@"+b.id+">"), "", 1)
-	if strings.HasPrefix(msg, "gopher:") ||
-		strings.HasPrefix(msg, "gopher") {
-		msg = strings.Replace(msg, strings.ToLower("gopher"), "", 1)
-	}
+	msg = strings.Replace(msg, b.msgprefix, "", 1)
+	msg = strings.TrimLeft(msg, "gopher")
 	msg = strings.Trim(msg, " :\n")
+
 	return msg
 }
 
@@ -198,7 +207,133 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 	return false
 }
 
-// HandleMessage will process the incoming message and
+var (
+	// Generic responses to all messages
+	containsToReactions = map[string][]string{
+		"︵": []string{"┬─┬ノ( º _ ºノ)"},
+		"彡": []string{"┬─┬ノ( º _ ºノ)"},
+		"my adorable little gophers": []string{"gopher"},
+		"bbq":       []string{"bbqgopher"},
+		"ghost":     []string{"ghost"},
+		"ermergerd": []string{"dragon"},
+		"ermahgerd": []string{"dragon"},
+		"beer me":   []string{"beer", "beers"},
+	}
+
+	// Bot-directed message reactions / responses from here down
+	botEventTextToFunc = map[string]func(*Bot, *slack.MessageEvent){
+		"newbie resources":     newbieResourcesPublic,
+		"newbie resources pvt": newbieResourcesPrivate,
+		"recommended channels": recommendedChannels,
+		"flip coin":            flipCoin,
+		"flip a coin":          flipCoin,
+		"version":              botVersion,
+	}
+
+	botEventTextToResponse = map[string][]string{
+		"recommended blogs": []string{
+			`Here are some popular blog posts and Twitter accounts you should follow:`,
+			`- Peter Bourgon <https://twitter.com/peterbourgon|@peterbourgon> - <https://peter.bourgon.org/blog>`,
+			`- Carlisia Campos <https://twitter.com/carlisia|@carlisia>`,
+			`- Dave Cheney <https://twitter.com/davecheney|@davecheney> - <http://dave.cheney.net>`,
+			`- Jaana Burcu Dogan <https://twitter.com/rakyll|@rakyll> - <http://golang.rakyll.org>`,
+			`- Jessie Frazelle <https://twitter.com/jessfraz|@jessfraz> - <https://blog.jessfraz.com>`,
+			`- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>`,
+			`- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>`,
+		},
+		"oss help wanted": []string{
+			`Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`,
+		},
+		"working with forks": []string{
+			`Here's how to work with package forks in Go: <http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`,
+		},
+		"block forever": []string{
+			`Here's how to block forever in Go: <http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`,
+		},
+		"http timeouts": []string{
+			`Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`,
+		},
+		"slices": []string{
+			`The following posts will explain how slices, maps and strings work in Go:`,
+			`- <https://blog.golang.org/slices>`,
+			`- <https://blog.golang.org/go-slices-usage-and-internals>`,
+			`- <https://blog.golang.org/strings>`,
+		},
+		"database tutorial": []string{
+			`Here's how to work with database/sql in Go: <http://go-database-sql.org/>`,
+		},
+		"package layout": []string{
+			`These articles will explain how to organize your Go packages:`,
+			`- <https://rakyll.org/style-packages/>`,
+			`- <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>`,
+			`- <https://peter.bourgon.org/go-best-practices-2016/#repository-structure>`,
+			``,
+			`This article will help you understand the design philosophy for packages: <https://www.goinggo.net/2017/02/design-philosophy-on-packaging.html>`,
+		},
+		"idiomatic go": []string{
+			`Tips on how to write idiomatic Go code <https://dmitri.shuralyov.com/idiomatic-go>`,
+		},
+		"avoid gotchas": []string{
+			`Read this article if you want to understand and avoid common gotchas in Go <https://divan.github.io/posts/avoid_gotchas>`,
+		},
+		"source code": []string{
+			`My source code is here <https://github.com/gopheracademy/gopher>`,
+		},
+		"stack": []string{
+			`I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>.`,
+			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
+			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
+		},
+		"help": []string{
+			`Here's a list of supported commands`,
+			`- "newbie resources" -> get a list of newbie resources`,
+			`- "newbie resources pvt" -> get a list of newbie resources as a private message`,
+			`- "recommended channels" -> get a list of recommended channels`,
+			`- "oss help" -> help the open-source community`,
+			`- "work with forks" -> how to work with forks of packages`,
+			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
+			`- "block forever" -> how to block forever`,
+			`- "http timeouts" -> tutorial about dealing with timeouts and http`,
+			`- "database tutorial" -> tutorial about using sql databases`,
+			`- "package layout" -> learn how to structure your Go package`,
+			`- "avoid gotchas" -> avoid common gotchas in Go`,
+			`- "library for <name>" -> search a go package that matches <name>`,
+			`- "flip a coin" -> flip a coin`,
+			`- "source code" -> location of my source code`,
+			`- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher`,
+		},
+	}
+
+	botEventTextToResponseAliases = map[string]string{
+		"recommended":          "recommended blogs",
+		"oss help":             "oss help wanted",
+		"work with forks":      "working with forks",
+		"how to block forever": "block forever",
+		"slice internals":      "slices",
+		"databases":            "database tutorial",
+		"gotchas":              "avoid gotchas",
+		"source":               "source code",
+		"where do you live?":   "stack",
+	}
+
+	botPrefixToFunc = map[string]func(*Bot, *slack.MessageEvent){
+		"xkcd:":       xkcd,
+		"library for": searchLibrary,
+		"share cl":    shareCL,
+	}
+
+	botContainsToReactions = map[string][]string{
+		"thank":  []string{"gopher"},
+		"cheers": []string{"gopher"},
+		"hello":  []string{"gopher"},
+	}
+
+	botHasPrefixToReactions = map[string][]string{
+		"wave": []string{"wave", "gopher"},
+	}
+)
+
+// HandleMessage will process the incoming message and repspond appropriately
 func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
 		return
@@ -213,37 +348,15 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
-	// All the variations of table flip seem to include this characters so... potato?
-	if strings.Contains(eventText, "︵") || strings.Contains(eventText, "彡") {
-		b.tableUnflip(event)
-		return
-	}
-
-	if strings.Contains(eventText, "my adorable little gophers") {
-		b.reactToEvent(event, "gopher")
-		return
-	}
-
-	if strings.Contains(eventText, "bbq") {
-		b.reactToEvent(event, "bbqgopher")
-		return
-	}
-
-	if strings.Contains(eventText, "ghost") {
-		b.reactToEvent(event, "ghost")
-		return
-	}
-
-	if strings.Contains(eventText, "ermergerd") ||
-		strings.Contains(eventText, "ermahgerd") {
-		b.reactToEvent(event, "dragon")
-		return
-	}
-
-	if strings.Contains(eventText, "beer me") {
-		b.reactToEvent(event, "beer")
-		b.reactToEvent(event, "beers")
-		return
+	// Reactions to all messages (including those not directed at the bot)
+	// that contain a certain string
+	for needle, reactions := range containsToReactions {
+		if strings.Contains(eventText, needle) {
+			for _, reaction := range reactions {
+				b.reactToEvent(event, reaction)
+			}
+			return
+		}
 	}
 
 	if strings.HasPrefix(eventText, "ghd/") {
@@ -270,6 +383,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	// All messages past this point are directed to @gopher itself
 	if !b.isBotMessage(event, eventText) {
 		return
 	}
@@ -279,146 +393,60 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		b.logf("message: %q\n", eventText)
 	}
 
-	if strings.HasPrefix(eventText, "share cl") {
-		b.shareCL(event, eventText)
+	// Responses that need some logic behind them
+	if responseFunc, ok := botEventTextToFunc[eventText]; ok {
+		responseFunc(b, event)
 		return
 	}
 
-	if eventText == "newbie resources" {
-		b.newbieResources(event, false)
+	// Responses that are just a canned string response
+	if responseLines, ok := botEventTextToResponse[eventText]; ok {
+		response := strings.Join(responseLines, "\n")
+		respond(b, event, response)
 		return
 	}
 
-	if eventText == "newbie resources pvt" {
-		b.newbieResources(event, true)
-		return
+	// aliases for the above canned responses
+	if key, ok := botEventTextToResponseAliases[eventText]; ok {
+		if responseLines, ok := botEventTextToResponse[key]; ok {
+			response := strings.Join(responseLines, "\n")
+			respond(b, event, response)
+			return
+		}
+
+		b.logf("Bad response alias: %v", eventText)
 	}
 
-	if eventText == "recommended channels" {
-		b.recommendedChannels(event)
-		return
+	// Reacting based on if the message contains a needle
+	for needle, reactions := range botContainsToReactions {
+		if strings.Contains(eventText, needle) {
+			for _, reaction := range reactions {
+				b.reactToEvent(event, reaction)
+			}
+			return
+		}
 	}
 
-	if eventText == "recommended blogs" ||
-		eventText == "recommended" {
-		b.recommendedBlogs(event)
-		return
-	}
-
-	if eventText == "oss help" ||
-		eventText == "oss help wanted" {
-		b.ossHelp(event)
-		return
-	}
-
-	if eventText == "work with forks" ||
-		eventText == "working with forks" {
-		b.goForks(event)
-		return
-	}
-
-	if eventText == "block forever" {
-		b.goBlockForever(event)
-		return
-	}
-
-	if eventText == "http timeouts" {
-		b.dealWithHTTPTimeouts(event)
-		return
-	}
-
-	if eventText == "slices" {
-		b.sliceUsageAndInternals(event)
-		return
-	}
-
-	if eventText == "database tutorial" {
-		b.goDatabaseTutorial(event)
-		return
-	}
-
-	if eventText == "xkcd:standards" {
-		b.xkcd(event, "https://xkcd.com/927/")
-		return
-	}
-
-	if eventText == "xkcd:compiling" {
-		b.xkcd(event, "https://xkcd.com/303/")
-		return
-	}
-
-	if eventText == "xkcd:optimization" {
-		b.xkcd(event, "https://xkcd.com/1691/")
-		return
-	}
-
-	if strings.HasPrefix(eventText, "xkcd:") {
-		b.xkcdAll(eventText, event)
-		return
-	}
-
-	if eventText == "package layout" {
-		b.packageLayout(event)
-		return
-	}
-
-	if eventText == "idiomatic go" {
-		b.idiomaticGo(event)
-		return
-	}
-
-	if eventText == "avoid gotchas" {
-		b.avoidGotchas(event)
-		return
-	}
-
-	if eventText == "source code" {
-		b.sourceCode(event)
-		return
-	}
-
-	if strings.HasPrefix(eventText, "library for") {
-		b.searchLibrary(event)
-		return
-	}
-
-	if strings.Contains(eventText, "thank") ||
-		eventText == "cheers" ||
-		eventText == "hello" {
-		b.reactToEvent(event, "gopher")
-		return
-	}
-
-	if eventText == "wave" {
-		b.reactToEvent(event, "wave")
-		b.reactToEvent(event, "gopher")
-		return
-	}
-
-	if eventText == "flip coin" ||
-		eventText == "flip a coin" {
-		b.replyFlipCoin(event)
-		return
-	}
-
-	if eventText == "where do you live?" ||
-		eventText == "stack" {
-		b.replyBotLocation(event)
-		return
-	}
-
-	if eventText == "version" {
-		b.replyVersion(event)
-		return
-	}
-
-	if eventText == "help" {
-		b.help(event)
-		return
+	// Reacting based on a prefix of the message
+	for prefix, reactions := range botHasPrefixToReactions {
+		if strings.HasPrefix(eventText, prefix) {
+			for _, reaction := range reactions {
+				b.reactToEvent(event, reaction)
+			}
+			return
+		}
 	}
 }
 
-func (b *Bot) newbieResources(event *slack.MessageEvent, private bool) {
+func newbieResourcesPublic(b *Bot, event *slack.MessageEvent) {
+	newbieResources(b, event, false)
+}
+
+func newbieResourcesPrivate(b *Bot, event *slack.MessageEvent) {
+	newbieResources(b, event, true)
+}
+
+func newbieResources(b *Bot, event *slack.MessageEvent, private bool) {
 	newbieResources := slack.Attachment{
 		Text: `First you should take the language tour: <http://tour.golang.org/>
 
@@ -462,7 +490,7 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 	}
 }
 
-func (b *Bot) recommendedChannels(event *slack.MessageEvent) {
+func recommendedChannels(b *Bot, event *slack.MessageEvent) {
 	message := slack.Attachment{}
 
 	for idx, val := range b.channels {
@@ -480,29 +508,6 @@ func (b *Bot) recommendedChannels(event *slack.MessageEvent) {
 		return
 	}
 }
-
-func (b *Bot) recommendedBlogs(event *slack.MessageEvent) {
-	message := slack.Attachment{}
-
-	message.Text = `Here are some popular blog posts and Twitter accounts you should follow:
-- Peter Bourgon <https://twitter.com/peterbourgon|@peterbourgon> - <https://peter.bourgon.org/blog>
-- Carlisia Campos <https://twitter.com/carlisia|@carlisia>
-- Dave Cheney <https://twitter.com/davecheney|@davecheney> - <http://dave.cheney.net>
-- Jaana Burcu Dogan <https://twitter.com/rakyll|@rakyll> - <http://golang.rakyll.org>
-- Jessie Frazelle <https://twitter.com/jessfraz|@jessfraz> - <https://blog.jessfraz.com>
-- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>
-- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>
-`
-
-	params := slack.PostMessageParameters{AsUser: true}
-	params.Attachments = []slack.Attachment{message}
-	_, _, err := b.slackBotAPI.PostMessage(event.User, "Here is a list of recommended channels:", params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
 
 func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 	if event.File == nil {
@@ -644,74 +649,15 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) ossHelp(event *slack.MessageEvent) {
+func respond(b *Bot, event *slack.MessageEvent, response string) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, response, params)
 	if err != nil {
 		b.logf("%s\n", err)
-		return
 	}
 }
 
-func (b *Bot) goForks(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's how to work with package forks in Go: <http://blog.sgmansfield.com/2016/06/working-with-forks-in-go/>`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) goBlockForever(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's how to block forever in Go: <http://blog.sgmansfield.com/2016/06/how-to-block-forever-in-go/>`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) goDatabaseTutorial(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's how to work with database/sql in Go: <http://go-database-sql.org/>`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) dealWithHTTPTimeouts(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `Here's a blog post which will help with http timeouts in Go: <https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/>`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) sliceUsageAndInternals(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	message := `The following posts will explain how slices, maps and strings work in Go:
-- <https://blog.golang.org/slices>
-- <https://blog.golang.org/go-slices-usage-and-internals>
-- <https://blog.golang.org/strings>`
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, message, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) tableUnflip(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `┬─┬ノ( º _ ºノ)`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) searchLibrary(event *slack.MessageEvent) {
+func searchLibrary(b *Bot, event *slack.MessageEvent) {
 	searchTerm := strings.ToLower(event.Text)
 	if idx := strings.Index(searchTerm, "library for"); idx != -1 {
 		searchTerm = event.Text[idx+11:]
@@ -741,33 +687,41 @@ func (b *Bot) searchLibrary(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) xkcd(event *slack.MessageEvent, imageLink string) {
-	params := slack.PostMessageParameters{AsUser: true, UnfurlLinks: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
+var xkcdAliases = map[string]int{
+	"standards":    927,
+	"compiling":    303,
+	"optimization": 1691,
 }
 
-func (b *Bot) xkcdAll(eventText string, event *slack.MessageEvent) {
+func xkcd(b *Bot, event *slack.MessageEvent) {
+	// repeats some earlier work but oh well
+	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
+	eventText = b.trimBot(eventText)
 	eventText = strings.TrimPrefix(eventText, "xkcd:")
-	// Verify it's an integer to be nice to XKCD
-	num, err := strconv.Atoi(eventText)
-	if err != nil {
-		// pretend we didn't hear them if they give bad data
-		b.logf("Error while attempting to parse XKCD string: %v\n", err)
-		return
+
+	// first check known aliases for certain comics
+	comicID := xkcdAliases[eventText]
+
+	// otherwise parse the number out of the evet text
+	if comicID == 0 {
+		// Verify it's an integer to be nice to XKCD
+		num, err := strconv.Atoi(eventText)
+		if err != nil {
+			// pretend we didn't hear them if they give bad data
+			b.logf("Error while attempting to parse XKCD string: %v\n", err)
+			return
+		}
+		comicID = num
 	}
 
-	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", num)
+	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", comicID)
 
 	params := slack.PostMessageParameters{
 		AsUser:      true,
 		UnfurlLinks: true,
 		UnfurlMedia: true,
 	}
-	_, _, err = b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
+	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -800,7 +754,7 @@ func (b *Bot) reactToEvent(event *slack.MessageEvent, reaction string) {
 	}
 }
 
-func (b *Bot) replyVersion(event *slack.MessageEvent) {
+func botVersion(b *Bot, event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", b.version), params)
 	if err != nil {
@@ -809,45 +763,7 @@ func (b *Bot) replyVersion(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) help(event *slack.MessageEvent) {
-	message := slack.Attachment{
-		Text: `- "newbie resources" -> get a list of newbie resources
-- "newbie resources pvt" -> get a list of newbie resources as a private message
-- "recommended channels" -> get a list of recommended channels
-- "oss help" -> help the open-source community
-- "work with forks" -> how to work with forks of packages
-- "idiomatic go" -> learn how to write more idiomatic Go code
-- "block forever" -> how to block forever
-- "http timeouts" -> tutorial about dealing with timeouts and http
-- "database tutorial" -> tutorial about using sql databases
-- "package layout" -> learn how to structure your Go package
-- "avoid gotchas" -> avoid common gotchas in Go
-- "library for <name>" -> search a go package that matches <name>
-- "flip a coin" -> flip a coin
-- "source code" -> location of my source code
-- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher
-`,
-	}
-
-	params := slack.PostMessageParameters{AsUser: true}
-	params.Attachments = []slack.Attachment{message}
-	_, _, err := b.slackBotAPI.PostMessage(event.User, "Here's a list of supported commands", params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) replyBotLocation(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>. I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>. You can find my heart at: <https://github.com/gopheracademy/gopher>.", params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) replyFlipCoin(event *slack.MessageEvent) {
+func flipCoin(b *Bot, event *slack.MessageEvent) {
 	buff := make([]byte, 1, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
@@ -859,49 +775,6 @@ func (b *Bot) replyFlipCoin(event *slack.MessageEvent) {
 	}
 	params := slack.PostMessageParameters{AsUser: true}
 	_, _, err = b.slackBotAPI.PostMessage(event.Channel, fmt.Sprintf("%s", result), params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) packageLayout(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	message := `These articles will explain how to organize your Go packages:
-- <https://rakyll.org/style-packages/>
-- <https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1#.ds38va3pp>
-- <https://peter.bourgon.org/go-best-practices-2016/#repository-structure>
-
-This article will help you understand the design philosophy for packages: <https://www.goinggo.net/2017/02/design-philosophy-on-packaging.html>`
-
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, message, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) idiomaticGo(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "Tips on how to write idiomatic Go code <https://dmitri.shuralyov.com/idiomatic-go>", params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) avoidGotchas(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "Read this article if you want to understand and avoid common gotchas in Go <https://divan.github.io/posts/avoid_gotchas>", params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
-}
-
-func (b *Bot) sourceCode(event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, "My source code is here <https://github.com/gopheracademy/gopher>", params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
