@@ -399,6 +399,12 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		return
 	}
 
+	// More responses that need some logic behind them
+	if responseFunc, ok := botPrefixToFunc[eventText]; ok {
+		responseFunc(b, event)
+		return
+	}
+
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
 		response := strings.Join(responseLines, "\n")
