@@ -319,6 +319,9 @@ var (
 		"gotchas":              "avoid gotchas",
 		"source":               "source code",
 		"where do you live?":   "stack",
+		"package structure":    "package layout",
+		"project structure":    "package layout",
+		"project layout":       "package layout",
 	}
 
 	botPrefixToFunc = map[string]func(*Bot, *slack.MessageEvent){
