@@ -50,6 +50,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/tap"
 )
 
@@ -59,7 +60,10 @@ var ErrIllegalHeaderWrite = errors.New("transport: the stream is done or WriteHe
 
 // http2Server implements the ServerTransport interface with HTTP2.
 type http2Server struct {
+	ctx         context.Context
 	conn        net.Conn
+	remoteAddr  net.Addr
+	localAddr   net.Addr
 	maxStreamID uint32               // max stream ID ever seen
 	authInfo    credentials.AuthInfo // auth info about the connection
 	inTapHandle tap.ServerInHandle
@@ -83,6 +87,8 @@ type http2Server struct {
 	fc         *inFlow
 	// sendQuotaPool provides flow control to outbound message.
 	sendQuotaPool *quotaPool
+
+	stats stats.Handler
 
 	mu            sync.Mutex // guard the following
 	state         transportState
@@ -124,7 +130,10 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 	}
 	var buf bytes.Buffer
 	t := &http2Server{
+		ctx:             context.Background(),
 		conn:            conn,
+		remoteAddr:      conn.RemoteAddr(),
+		localAddr:       conn.LocalAddr(),
 		authInfo:        config.AuthInfo,
 		framer:          framer,
 		hBuf:            &buf,
@@ -139,6 +148,15 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 		shutdownChan:    make(chan struct{}),
 		activeStreams:   make(map[uint32]*Stream),
 		streamSendQuota: defaultWindowSize,
+		stats:           config.StatsHandler,
+	}
+	if t.stats != nil {
+		t.ctx = t.stats.TagConn(t.ctx, &stats.ConnTagInfo{
+			RemoteAddr: t.remoteAddr,
+			LocalAddr:  t.localAddr,
+		})
+		connBegin := &stats.ConnBegin{}
+		t.stats.HandleConn(t.ctx, connBegin)
 	}
 	go t.controller()
 	t.writableChan <- 0
@@ -146,7 +164,7 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 }
 
 // operateHeader takes action on the decoded headers.
-func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(*Stream)) (close bool) {
+func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(*Stream), traceCtx func(context.Context, string) context.Context) (close bool) {
 	buf := newRecvBuffer()
 	s := &Stream{
 		id:  frame.Header().StreamID,
@@ -172,12 +190,12 @@ func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(
 	}
 	s.recvCompress = state.encoding
 	if state.timeoutSet {
-		s.ctx, s.cancel = context.WithTimeout(context.TODO(), state.timeout)
+		s.ctx, s.cancel = context.WithTimeout(t.ctx, state.timeout)
 	} else {
-		s.ctx, s.cancel = context.WithCancel(context.TODO())
+		s.ctx, s.cancel = context.WithCancel(t.ctx)
 	}
 	pr := &peer.Peer{
-		Addr: t.conn.RemoteAddr(),
+		Addr: t.remoteAddr,
 	}
 	// Attach Auth info if there is any.
 	if t.authInfo != nil {
@@ -234,13 +252,26 @@ func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(
 	s.windowHandler = func(n int) {
 		t.updateWindow(s, uint32(n))
 	}
+	s.ctx = traceCtx(s.ctx, s.method)
+	if t.stats != nil {
+		s.ctx = t.stats.TagRPC(s.ctx, &stats.RPCTagInfo{FullMethodName: s.method})
+		inHeader := &stats.InHeader{
+			FullMethod:  s.method,
+			RemoteAddr:  t.remoteAddr,
+			LocalAddr:   t.localAddr,
+			Compression: s.recvCompress,
+			WireLength:  int(frame.Header().Length),
+		}
+		t.stats.HandleRPC(s.ctx, inHeader)
+	}
 	handle(s)
 	return
 }
 
 // HandleStreams receives incoming streams using the given handler. This is
 // typically run in a separate goroutine.
-func (t *http2Server) HandleStreams(handle func(*Stream)) {
+// traceCtx attaches trace to ctx and returns the new context.
+func (t *http2Server) HandleStreams(handle func(*Stream), traceCtx func(context.Context, string) context.Context) {
 	// Check the validity of client preface.
 	preface := make([]byte, len(clientPreface))
 	if _, err := io.ReadFull(t.conn, preface); err != nil {
@@ -295,7 +326,7 @@ func (t *http2Server) HandleStreams(handle func(*Stream)) {
 		}
 		switch frame := frame.(type) {
 		case *http2.MetaHeadersFrame:
-			if t.operateHeaders(frame, handle) {
+			if t.operateHeaders(frame, handle, traceCtx) {
 				t.Close()
 				break
 			}
@@ -508,8 +539,15 @@ func (t *http2Server) WriteHeader(s *Stream, md metadata.MD) error {
 			t.hEnc.WriteField(hpack.HeaderField{Name: k, Value: entry})
 		}
 	}
+	bufLen := t.hBuf.Len()
 	if err := t.writeHeaders(s, t.hBuf, false); err != nil {
 		return err
+	}
+	if t.stats != nil {
+		outHeader := &stats.OutHeader{
+			WireLength: bufLen,
+		}
+		t.stats.HandleRPC(s.Context(), outHeader)
 	}
 	t.writableChan <- 0
 	return nil
@@ -563,9 +601,16 @@ func (t *http2Server) WriteStatus(s *Stream, statusCode codes.Code, statusDesc s
 			t.hEnc.WriteField(hpack.HeaderField{Name: k, Value: entry})
 		}
 	}
+	bufLen := t.hBuf.Len()
 	if err := t.writeHeaders(s, t.hBuf, true); err != nil {
 		t.Close()
 		return err
+	}
+	if t.stats != nil {
+		outTrailer := &stats.OutTrailer{
+			WireLength: bufLen,
+		}
+		t.stats.HandleRPC(s.Context(), outTrailer)
 	}
 	t.closeStream(s)
 	t.writableChan <- 0
@@ -595,19 +640,14 @@ func (t *http2Server) Write(s *Stream, data []byte, opts *Options) error {
 			return nil
 		}
 		size := http2MaxFrameLen
-		s.sendQuotaPool.add(0)
 		// Wait until the stream has some quota to send the data.
 		sq, err := wait(s.ctx, nil, nil, t.shutdownChan, s.sendQuotaPool.acquire())
 		if err != nil {
 			return err
 		}
-		t.sendQuotaPool.add(0)
 		// Wait until the transport has some quota to send the data.
 		tq, err := wait(s.ctx, nil, nil, t.shutdownChan, t.sendQuotaPool.acquire())
 		if err != nil {
-			if _, ok := err.(StreamError); ok {
-				t.sendQuotaPool.cancel()
-			}
 			return err
 		}
 		if sq < size {
@@ -675,7 +715,7 @@ func (t *http2Server) applySettings(ss []http2.Setting) {
 			t.mu.Lock()
 			defer t.mu.Unlock()
 			for _, stream := range t.activeStreams {
-				stream.sendQuotaPool.reset(int(s.Val - t.streamSendQuota))
+				stream.sendQuotaPool.add(int(s.Val - t.streamSendQuota))
 			}
 			t.streamSendQuota = s.Val
 		}
@@ -752,6 +792,10 @@ func (t *http2Server) Close() (err error) {
 	for _, s := range streams {
 		s.cancel()
 	}
+	if t.stats != nil {
+		connEnd := &stats.ConnEnd{}
+		t.stats.HandleConn(t.ctx, connEnd)
+	}
 	return
 }
 
@@ -783,7 +827,7 @@ func (t *http2Server) closeStream(s *Stream) {
 }
 
 func (t *http2Server) RemoteAddr() net.Addr {
-	return t.conn.RemoteAddr()
+	return t.remoteAddr
 }
 
 func (t *http2Server) Drain() {

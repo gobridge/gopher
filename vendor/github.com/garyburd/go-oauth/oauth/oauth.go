@@ -218,15 +218,16 @@ func writeBaseString(w io.Writer, method string, u *url.URL, form url.Values, oa
 
 var nonceCounter uint64
 
+func init() {
+	if err := binary.Read(rand.Reader, binary.BigEndian, &nonceCounter); err != nil {
+		// fallback to time if rand reader is broken
+		nonceCounter = uint64(time.Now().UnixNano())
+	}
+}
+
 // nonce returns a unique string.
 func nonce() string {
-	n := atomic.AddUint64(&nonceCounter, 1)
-	if n == 1 {
-		binary.Read(rand.Reader, binary.BigEndian, &n)
-		n ^= uint64(time.Now().UnixNano())
-		atomic.CompareAndSwapUint64(&nonceCounter, 1, n)
-	}
-	return strconv.FormatUint(n, 16)
+	return strconv.FormatUint(atomic.AddUint64(&nonceCounter, 1), 16)
 }
 
 // SignatureMethod identifies a signature method.
@@ -550,6 +551,20 @@ func (c *Client) RequestToken(client *http.Client, temporaryCredentials *Credent
 	if verifier != "" {
 		params.Set("oauth_verifier", verifier)
 	}
+	credentials, vals, err := c.requestCredentials(client, temporaryCredentials, c.TokenRequestURI, params)
+	if err != nil {
+		return nil, nil, err
+	}
+	return credentials, vals, nil
+}
+
+// RequestTokenXAuth requests token credentials from the server using the xAuth protocol.
+// See https://dev.twitter.com/oauth/xauth for information on xAuth.
+func (c *Client) RequestTokenXAuth(client *http.Client, temporaryCredentials *Credentials, user, password string) (*Credentials, url.Values, error) {
+	params := make(url.Values)
+	params.Set("x_auth_mode", "client_auth")
+	params.Set("x_auth_username", user)
+	params.Set("x_auth_password", password)
 	credentials, vals, err := c.requestCredentials(client, temporaryCredentials, c.TokenRequestURI, params)
 	if err != nil {
 		return nil, nil, err
