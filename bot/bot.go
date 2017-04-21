@@ -321,6 +321,9 @@ var (
 		"gotchas":              "avoid gotchas",
 		"source":               "source code",
 		"where do you live?":   "stack",
+		"package structure":    "package layout",
+		"project structure":    "package layout",
+		"project layout":       "package layout",
 	}
 
 	botPrefixToFunc = map[string]func(*Bot, *slack.MessageEvent){
@@ -669,7 +672,7 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
 		return
 	}
 
-	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you've wrote a large block of text (more than 9 lines). To make the conversation easier to follow the conversation and facilitate collaboration, please consider using: <https://play.golang.org> if you shared code. If you wish to not link against the playground, please start the message with "nolink". Thank you.`, params)
+	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you've written a large block of text (more than 9 lines). To make the conversation easier to follow the conversation and facilitate collaboration, please consider using: <https://play.golang.org> if you shared code. If you wish to not link against the playground, please start the message with "nolink". Thank you.`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
