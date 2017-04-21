@@ -217,6 +217,8 @@ var (
 		"ghost":     {"ghost"},
 		"ermergerd": {"dragon"},
 		"ermahgerd": {"dragon"},
+		"dragon":    {"dragon"},
+		"spacex":    {"rocket"},
 		"beer me":   {"beer", "beers"},
 	}
 
@@ -360,7 +362,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		if strings.Contains(eventText, needle) {
 			if _, ok := reactWithMessage[needle]; ok {
 				for _, reaction := range reactions {
-					respond(b, event , reaction)
+					respond(b, event, reaction)
 				}
 			} else {
 				for _, reaction := range reactions {
