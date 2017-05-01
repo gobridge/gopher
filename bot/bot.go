@@ -489,6 +489,7 @@ There are some awesome websites as well:
  - <http://go-database-sql.org> how to use SQL databases in Go
  - <https://dmitri.shuralyov.com/idiomatic-go> tips on how to write more idiomatic Go code
  - <https://divan.github.io/posts/avoid_gotchas> will help you avoid gotchas in Go
+ - <https://golangbot.com> tutorials to help you get started in Go
 
 There's also an exhaustive list of videos <http://gophervids.appspot.com> related to Go from various authors.
 
