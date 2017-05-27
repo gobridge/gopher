@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/account-auth.json
 export PATH=${PATH}:/opt/google-cloud-sdk/bin
+export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/account-auth.json
+export KUBECONFIG=${HOME}/kubeconfig
 
 echo ${GCLOUD_SERVICE_KEY} | base64 --decode -i > ${HOME}/account-auth.json
+echo ${KUBECONFIG} | base64 --decode -i > ${HOME}/kubeconfig
 gcloud auth activate-service-account --key-file=${HOME}/account-auth.json
 
 gcloud -q config set project ${PROJECT_NAME}
