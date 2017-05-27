@@ -113,8 +113,7 @@ func main() {
 	runtime.Gosched()
 
 	ctx := context.Background()
-	projectID := "gopher-slack-bot"
-	dsClient, err := datastore.NewClient(context.Background(), projectID, option.WithServiceAccountFile("/tmp/datastore.json"))
+	dsClient, err := datastore.NewClient(context.Background(), "gophers-slack-bot", option.WithServiceAccountFile("/tmp/datastore.json"))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
