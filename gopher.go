@@ -39,6 +39,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
 	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 )
 
 const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
@@ -113,7 +114,7 @@ func main() {
 
 	ctx := context.Background()
 	projectID := "gopher-slack-bot"
-	dsClient, err := datastore.NewClient(ctx, projectID)
+	dsClient, err := datastore.NewClient(context.Background(), projectID, option.WithServiceAccountFile("/tmp/datastore.json"))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
