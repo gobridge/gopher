@@ -82,15 +82,17 @@ spec:
                 name: gopher-twitter-secret
                 key: accessTokenSecret
         volumeMounts:
-          - name: datastore
+          - name: secrets
             mountPath: /tmp
             readOnly: true
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       volumes:
-        - name: datastore
+        - name: secrets
           secret:
-            secretName: gopher-datastore
+            secretName: gopher-secrets
             items:
               - key: file
                 path: datastore.json
+              - key: file
+                path: trace.json

@@ -122,7 +122,7 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	traceClient, err := trace.NewClient(ctx, projectID)
+	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace.json"))
 
 	traceHttpClient := traceClient.NewHTTPClient(httpClient)
 

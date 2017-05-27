@@ -3,6 +3,7 @@
 .idea/libraries
 secrets.yaml
 secrets-datastore.yaml
+secrets-trace.yaml
 secrets-twitter.yaml
 datastore.json
 kubeconfig.yaml
