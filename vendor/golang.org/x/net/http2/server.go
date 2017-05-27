@@ -753,9 +753,13 @@ func (sc *serverConn) serve() {
 		sc.idleTimerCh = sc.idleTimer.C
 	}
 
-	var gracefulShutdownCh <-chan struct{}
+	var gracefulShutdownCh chan struct{}
 	if sc.hs != nil {
-		gracefulShutdownCh = h1ServerShutdownChan(sc.hs)
+		ch := h1ServerShutdownChan(sc.hs)
+		if ch != nil {
+			gracefulShutdownCh = make(chan struct{})
+			go sc.awaitGracefulShutdown(ch, gracefulShutdownCh)
+		}
 	}
 
 	go sc.readFrames() // closed by defer sc.conn.Close above
@@ -805,6 +809,14 @@ func (sc *serverConn) serve() {
 		if sc.inGoAway && sc.curOpenStreams() == 0 && !sc.needToSendGoAway && !sc.writingFrame {
 			return
 		}
+	}
+}
+
+func (sc *serverConn) awaitGracefulShutdown(sharedCh <-chan struct{}, privateCh chan struct{}) {
+	select {
+	case <-sc.doneServing:
+	case <-sharedCh:
+		close(privateCh)
 	}
 }
 
@@ -1049,7 +1061,11 @@ func (sc *serverConn) wroteFrame(res frameWriteResult) {
 			// stateClosed after the RST_STREAM frame is
 			// written.
 			st.state = stateHalfClosedLocal
-			sc.resetStream(streamError(st.id, ErrCodeCancel))
+			// Section 8.1: a server MAY request that the client abort
+			// transmission of a request without error by sending a
+			// RST_STREAM with an error code of NO_ERROR after sending
+			// a complete response.
+			sc.resetStream(streamError(st.id, ErrCodeNo))
 		case stateHalfClosedRemote:
 			sc.closeStream(st, errHandlerComplete)
 		}

@@ -106,7 +106,8 @@ func main() {
 	anaconda.SetConsumerSecret(twitterConsumerSecret)
 	twitterAPI := anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
 
-	slackBotRTM := slackBotAPI.NewRTM()
+	rtmOptions := &slack.RTMOptions{}
+	slackBotRTM := slackBotAPI.NewRTMWithOptions(rtmOptions)
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
