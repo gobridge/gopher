@@ -5,4 +5,6 @@ secrets.yaml
 secrets-datastore.yaml
 secrets-twitter.yaml
 datastore.json
+kubeconfig.yaml
+kubeconfig
 gopher

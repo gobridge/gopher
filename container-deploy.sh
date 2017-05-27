@@ -11,7 +11,7 @@ gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS
 gcloud -q config set project ${PROJECT_NAME}
 gcloud -q config set container/cluster ${CLUSTER_NAME}
 gcloud -q config set container/use_client_certificate True
-gcloud -q config set compute/zone ${CLOUDSDK_COMPUTE_ZONE}
+gcloud -q config set compute/zone europe-west1-d
 
 gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/bot
 
