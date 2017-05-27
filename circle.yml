@@ -6,7 +6,6 @@ machine:
 
 dependencies:
   pre:
-    - ./circleci.sh
     - ./container-make.sh
 
 test:
