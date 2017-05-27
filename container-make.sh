@@ -4,6 +4,7 @@ sudo pip install pyopenssl
 sudo apt-get install python-openssl python3-openssl
 sudo /opt/google-cloud-sdk/bin/gcloud -q components update
 sudo /opt/google-cloud-sdk/bin/gcloud -q components update kubectl
+sudo chown -R ubuntu:ubuntu /home/ubuntu/.config
 
 CONTAINER_NAME=eu.gcr.io/${PROJECT_NAME}/bot
 CONTAINER_TAG=${CIRCLE_SHA1}
