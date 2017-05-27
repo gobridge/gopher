@@ -32,6 +32,11 @@
 			"Rev": "7eaaec940b71769743a0d2848381a596475db704"
 		},
 		{
+			"ImportPath": "cloud.google.com/go/trace",
+			"Comment": "v0.7.0-171-g7eaaec9",
+			"Rev": "7eaaec940b71769743a0d2848381a596475db704"
+		},
+		{
 			"ImportPath": "github.com/ChimeraCoder/anaconda",
 			"Rev": "51200854e890da0fcefd1e26524b8ddd175ae850"
 		},
@@ -146,6 +151,10 @@
 			"Rev": "f047394b6d14284165300fd82dad67edb3a4d7f6"
 		},
 		{
+			"ImportPath": "golang.org/x/sync/semaphore",
+			"Rev": "f52d1811a62927559de87708c8913c1650ce4f26"
+		},
+		{
 			"ImportPath": "golang.org/x/text/secure/bidirule",
 			"Rev": "19e51611da83d6be54ddafce4a4af510cb3e9ea4"
 		},
@@ -162,6 +171,26 @@
 			"Rev": "19e51611da83d6be54ddafce4a4af510cb3e9ea4"
 		},
 		{
+			"ImportPath": "golang.org/x/time/rate",
+			"Rev": "8be79e1e0910c292df4e79c241bb7e8f7e725959"
+		},
+		{
+			"ImportPath": "google.golang.org/api/cloudtrace/v1",
+			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
+		},
+		{
+			"ImportPath": "google.golang.org/api/gensupport",
+			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
+		},
+		{
+			"ImportPath": "google.golang.org/api/googleapi",
+			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
+		},
+		{
+			"ImportPath": "google.golang.org/api/googleapi/internal/uritemplates",
+			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
+		},
+		{
 			"ImportPath": "google.golang.org/api/googleapi/transport",
 			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
 		},
@@ -175,6 +204,10 @@
 		},
 		{
 			"ImportPath": "google.golang.org/api/option",
+			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
+		},
+		{
+			"ImportPath": "google.golang.org/api/support/bundler",
 			"Rev": "0209b31435ad4749b84ce122e669fb098f556642"
 		},
 		{
