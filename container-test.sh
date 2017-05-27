@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -ex
-
 PROJECT_NAME='github.com/gopheracademy/gopher'
 PROJECT_DIR=${PWD}
 

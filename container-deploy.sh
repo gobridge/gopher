@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -ex
-
 export GOOGLE_APPLICATION_CREDENTIALS=${HOME}/account-auth.json
 
 sudo /opt/google-cloud-sdk/bin/gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/bot

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -ex
-
 CONTAINER_NAME=eu.gcr.io/${PROJECT_NAME}/bot
 CONTAINER_TAG=${CIRCLE_SHA1}
 
@@ -10,12 +8,11 @@ PROJECT_DIR=${PWD}
 
 CONTAINER_GOPATH='/go'
 CONTAINER_PROJECT_DIR="${CONTAINER_GOPATH}/src/${PROJECT_NAME}"
-CONTAINER_PROJECT_GOPATH="${CONTAINER_GOPATH}"
 
 docker run --rm \
         --net="host" \
         -v ${PROJECT_DIR}:${CONTAINER_PROJECT_DIR} \
-        -e GOPATH=${CONTAINER_PROJECT_GOPATH} \
+        -e GOPATH=${CONTAINER_GOPATH} \
         -e CGO_ENABLED=0 \
         -w "${CONTAINER_PROJECT_DIR}" \
         golang:1.8.3-alpine \
