@@ -6,7 +6,7 @@ machine:
 
 dependencies:
   pre:
-    - sudo ./circleci.sh
+    - ./circleci.sh
     - ./container-make.sh
 
 test:
