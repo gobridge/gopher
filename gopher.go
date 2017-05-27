@@ -116,13 +116,13 @@ func main() {
 	projectID := "gophers-slack-bot"
 
 	ctx := context.Background()
-	dsClient, err := datastore.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/datastore.json"))
+	dsClient, err := datastore.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/datastore/datastore.json"))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	defer dsClient.Close()
 
-	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace.json"))
+	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace/trace.json"))
 
 	traceHttpClient := traceClient.NewHTTPClient(httpClient)
 

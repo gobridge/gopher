@@ -49,8 +49,8 @@ spec:
         securityContext:
           privileged: false
         env:
-          - name: GOOGLE_APPLICATION_CREDENTIALS
-            value: /tmp/datastore.json
+#          - name: GOOGLE_APPLICATION_CREDENTIALS
+#            value: /tmp/datastore.json
           - name: GOPHERS_SLACK_BOT_NAME
             valueFrom:
               secretKeyRef:
@@ -82,17 +82,24 @@ spec:
                 name: gopher-twitter-secret
                 key: accessTokenSecret
         volumeMounts:
-          - name: secrets
-            mountPath: /tmp
+          - name: datastore
+            mountPath: /tmp/datastore
+            readOnly: true
+          - name: trace
+            mountPath: /tmp/trace
             readOnly: true
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       volumes:
-        - name: secrets
+        - name: datastore
           secret:
-            secretName: gopher-secrets
+            secretName: gopher-datastore
             items:
               - key: file
                 path: datastore.json
+        - name: trace
+          secret:
+            secretName: gopher-trace
+            items:
               - key: file
                 path: trace.json
