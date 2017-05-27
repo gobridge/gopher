@@ -65,6 +65,9 @@ func (b *Bot) getCLFromDS(query *datastore.Query) (*datastore.Key, *storedCL, er
 }
 
 func (b *Bot) GetLastSeenCL() (int, error) {
+	span := b.traceClient.NewSpan("b.GetLastSeenCL")
+	defer span.Finish()
+
 	latestCLQuery := datastore.NewQuery("GoCL").
 		Order("-CrawledAt").
 		Limit(1).
@@ -81,6 +84,10 @@ func (b *Bot) GetLastSeenCL() (int, error) {
 }
 
 func (b *Bot) wasShown(cl gerritCL) (bool, error) {
+	span := b.traceClient.NewSpan("b.wasShown")
+	span.SetLabel("clid", strconv.Itoa(cl.Number))
+	defer span.Finish()
+
 	key := datastore.IDKey("GoCL", int64(cl.Number), nil)
 	query := datastore.NewQuery("GoCL").Ancestor(key)
 	key, _, err := b.getCLFromDS(query)
@@ -88,6 +95,10 @@ func (b *Bot) wasShown(cl gerritCL) (bool, error) {
 }
 
 func (b *Bot) saveCL(cl gerritCL) error {
+	span := b.traceClient.NewSpan("b.saveCL")
+	span.SetLabel("clid", strconv.Itoa(cl.Number))
+	defer span.Finish()
+
 	taskKey := datastore.IDKey("GoCL", int64(cl.Number), nil)
 	gocl := &storedCL{
 		URL:       cl.link(),
@@ -99,6 +110,10 @@ func (b *Bot) saveCL(cl gerritCL) error {
 }
 
 func (b *Bot) updateCL(key *datastore.Key, cl *storedCL) error {
+	span := b.traceClient.NewSpan("b.updateCL")
+	span.SetLabel("clid", strconv.FormatInt(key.ID, 10))
+	defer span.Finish()
+
 	taskKey := datastore.IDKey("GoCL", key.ID, nil)
 	_, err := b.dsClient.Put(b.ctx, taskKey, cl)
 	return err
@@ -287,14 +302,20 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
 
+	span := b.traceClient.NewSpan("b.GetLastSeenCL")
 	lastID, err := b.GetLastSeenCL()
+	span.Finish()
 	if err != nil {
 		b.logf("got error while loading last ID from the datastore: %v\n", err)
 		return
 	}
 
+	span = b.traceClient.NewSpan("b.processCLList")
 	lastID = b.processCLList(lastID)
+	span.Finish()
 	for range tk.C {
+		span = b.traceClient.NewSpan("b.processCLList")
 		lastID = b.processCLList(lastID)
+		span.Finish()
 	}
 }

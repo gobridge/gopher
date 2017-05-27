@@ -35,6 +35,7 @@ import (
 	"github.com/gopheracademy/gopher/bot"
 
 	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/trace"
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
@@ -112,14 +113,20 @@ func main() {
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
+	projectID := "gophers-slack-bot"
+
 	ctx := context.Background()
-	dsClient, err := datastore.NewClient(context.Background(), "gophers-slack-bot", option.WithServiceAccountFile("/tmp/datastore.json"))
+	dsClient, err := datastore.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/datastore.json"))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(ctx, slackBotAPI, dsClient, twitterAPI, httpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	traceClient, err := trace.NewClient(ctx, projectID)
+
+	traceHttpClient := traceClient.NewHTTPClient(httpClient)
+
+	b := bot.NewBot(ctx, slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(slackBotRTM); err != nil {
 		panic(err)
 	}
@@ -155,14 +162,21 @@ func main() {
 		}
 	}()
 
-	go func() {
+	go func(traceClient *trace.Client) {
+		healthz := func(traceClient *trace.Client) http.HandlerFunc {
+			return func(w http.ResponseWriter, r *http.Request) {
+				span := traceClient.SpanFromRequest(r)
+				defer span.Finish()
+
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintln(w, info)
+			}
+		}
+
 		r := mux.NewRouter()
 
-		r.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, info)
-		}).
+		r.HandleFunc("/healthz", healthz(traceClient)).
 			Name("info").
 			Methods("GET")
 
@@ -174,7 +188,7 @@ func main() {
 		}
 
 		log.Fatal(s.ListenAndServe())
-	}()
+	}(traceClient)
 
 	log.Println("Gopher is now running")
 	select {}

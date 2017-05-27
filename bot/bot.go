@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/trace"
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/nlopes/slack"
 	"golang.org/x/net/context"
@@ -53,13 +54,21 @@ type (
 		logf        Logger
 		ctx         context.Context
 		dsClient    *datastore.Client
+		traceClient *trace.Client
 	}
 )
 
 // Init must be called before anything else in order to initialize the bot
 func (b *Bot) Init(rtm *slack.RTM) error {
+	span := b.traceClient.NewSpan("b.Init")
+	defer span.Finish()
+
 	b.logf("Determining bot / user IDs")
+
+	childSpan := span.NewChild("slackApi.GetUsers")
 	users, err := b.slackBotAPI.GetUsers()
+	childSpan.Finish()
+
 	if err != nil {
 		return err
 	}
@@ -89,7 +98,9 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	users = nil
 
 	b.logf("Determining channels ID\n")
+	childSpan = span.NewChild("slackApi.GetChannels")
 	publicChannels, err := b.slackBotAPI.GetChannels(true)
+	childSpan.Finish()
 	if err != nil {
 		return err
 	}
@@ -105,7 +116,9 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	publicChannels = nil
 
 	b.logf("Determining groups ID\n")
+	childSpan = span.NewChild("slackApi.GetGroups")
 	botGroups, err := b.slackBotAPI.GetGroups(true)
+	childSpan.Finish()
 	for _, group := range botGroups {
 		groupName := strings.ToLower(group.Name)
 		if chn, ok := b.channels[groupName]; ok && b.channels[groupName].slackID == "" {
@@ -117,9 +130,11 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	botGroups = nil
 
 	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
-
 	params := slack.PostMessageParameters{AsUser: true}
+	childSpan = span.NewChild("b.AnnouncingStartupFinish")
 	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
+	childSpan.Finish()
+
 	if err != nil {
 		b.logf(`failed to deploy version: %s`, b.version)
 	}
@@ -129,6 +144,9 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 
 // TeamJoined is called when the someone joins the team
 func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
+	span := b.traceClient.NewSpan("b.TeamJoined")
+	defer span.Finish()
+
 	if b.devMode {
 		return
 	}
@@ -358,6 +376,10 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		b.logf("channel: %s -> message: %q\n", event.Channel, b.trimBot(eventText))
 		return
 	}
+
+	span := b.traceClient.NewSpan("b.HandleMessage")
+	span.SetLabel("eventText", eventText)
+	defer span.Finish()
 
 	// Reactions to all messages (including those not directed at the bot)
 	// that contain a certain string
@@ -820,7 +842,7 @@ func flipCoin(b *Bot, event *slack.MessageEvent) {
 }
 
 // NewBot will create a new Slack bot
-func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *trace.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
 		ctx:         ctx,
 		gerritLink:  gerritLink,
@@ -832,6 +854,7 @@ func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.
 		logf:        log,
 		slackBotAPI: slackBotAPI,
 		dsClient:    dsClient,
+		traceClient: traceClient,
 		twitterAPI:  twitterAPI,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
