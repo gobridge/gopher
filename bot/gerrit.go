@@ -53,8 +53,8 @@ func (cl *gerritCL) message() string {
 	return subject
 }
 
-func (b *Bot) getCLFromDS(query *datastore.Query) (*datastore.Key, *storedCL, error) {
-	iter := b.dsClient.Run(b.ctx, query)
+func (b *Bot) getCLFromDS(ctx context.Context, query *datastore.Query) (*datastore.Key, *storedCL, error) {
+	iter := b.dsClient.Run(ctx, query)
 
 	dst := &storedCL{}
 	key, err := iter.Next(dst)
@@ -66,16 +66,13 @@ func (b *Bot) getCLFromDS(query *datastore.Query) (*datastore.Key, *storedCL, er
 	return key, dst, nil
 }
 
-func (b *Bot) GetLastSeenCL() (int, error) {
-	span := b.traceClient.NewSpan("b.GetLastSeenCL")
-	defer span.Finish()
-
+func (b *Bot) GetLastSeenCL(ctx context.Context) (int, error) {
 	latestCLQuery := datastore.NewQuery("GoCL").
 		Order("-CrawledAt").
 		Limit(1).
 		KeysOnly()
 
-	key, _, err := b.getCLFromDS(latestCLQuery)
+	key, _, err := b.getCLFromDS(ctx, latestCLQuery)
 	if err != nil {
 		return -1, err
 	}
@@ -85,47 +82,35 @@ func (b *Bot) GetLastSeenCL() (int, error) {
 	return int(key.ID), nil
 }
 
-func (b *Bot) wasShown(cl gerritCL) (bool, error) {
-	span := b.traceClient.NewSpan("b.wasShown")
-	span.SetLabel("clid", strconv.Itoa(cl.Number))
-	defer span.Finish()
-
+func (b *Bot) wasShown(ctx context.Context, cl gerritCL) (bool, error) {
 	key := datastore.IDKey("GoCL", int64(cl.Number), nil)
 	query := datastore.NewQuery("GoCL").Ancestor(key)
-	key, _, err := b.getCLFromDS(query)
+	key, _, err := b.getCLFromDS(ctx, query)
 	return key != nil, err
 }
 
-func (b *Bot) saveCL(cl gerritCL) error {
-	span := b.traceClient.NewSpan("b.saveCL")
-	span.SetLabel("clid", strconv.Itoa(cl.Number))
-	defer span.Finish()
-
+func (b *Bot) saveCL(ctx context.Context, cl gerritCL) error {
 	taskKey := datastore.IDKey("GoCL", int64(cl.Number), nil)
 	gocl := &storedCL{
 		URL:       cl.link(),
 		Message:   cl.message(),
 		CrawledAt: time.Now(),
 	}
-	_, err := b.dsClient.Put(b.ctx, taskKey, gocl)
+	_, err := b.dsClient.Put(ctx, taskKey, gocl)
 	return err
 }
 
-func (b *Bot) updateCL(key *datastore.Key, cl *storedCL) error {
-	span := b.traceClient.NewSpan("b.updateCL")
-	span.SetLabel("clid", strconv.FormatInt(key.ID, 10))
-	defer span.Finish()
-
+func (b *Bot) updateCL(ctx context.Context, key *datastore.Key, cl *storedCL) error {
 	taskKey := datastore.IDKey("GoCL", key.ID, nil)
-	_, err := b.dsClient.Put(b.ctx, taskKey, cl)
+	_, err := b.dsClient.Put(ctx, taskKey, cl)
 	return err
 }
 
-func (b *Bot) processCLList(lastID int, span *trace.Span) int {
+func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) int {
 	req, err := http.NewRequest("GET", b.gerritLink, nil)
 	req.Header.Add("User-Agent", "Gophers Slack bot")
-	ctx := trace.NewContext(context.Background(), span)
 	req = req.WithContext(ctx)
+
 	resp, err := b.client.Do(req)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -177,7 +162,7 @@ func (b *Bot) processCLList(lastID int, span *trace.Span) int {
 	for idx := foundIdx - 1; idx >= 0; idx-- {
 		cl := cls[idx]
 
-		if shown, err := b.wasShown(cl); err == nil {
+		if shown, err := b.wasShown(ctx, cl); err == nil {
 			if shown {
 				continue
 			}
@@ -195,13 +180,13 @@ func (b *Bot) processCLList(lastID int, span *trace.Span) int {
 		params := slack.PostMessageParameters{AsUser: true}
 		params.Attachments = append(params.Attachments, msg)
 
-		err = b.saveCL(cl)
+		err = b.saveCL(ctx, cl)
 		if err != nil {
 			b.logf("got error while saving CL to datastore: %v", err)
 			return lastID
 		}
 
-		_, _, err = b.slackBotAPI.PostMessage(pvtChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pvtChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
@@ -209,7 +194,7 @@ func (b *Bot) processCLList(lastID int, span *trace.Span) int {
 
 		lastID = cl.Number
 
-		_, _, err = b.slackBotAPI.PostMessage(pubChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pubChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
@@ -219,7 +204,7 @@ func (b *Bot) processCLList(lastID int, span *trace.Span) int {
 	return lastID
 }
 
-func shareCL(b *Bot, event *slack.MessageEvent) {
+func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	// repeats some earlier work but oh well
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
 	eventText = b.trimBot(eventText)
@@ -228,7 +213,7 @@ func shareCL(b *Bot, event *slack.MessageEvent) {
 		b.logf("share attempt caught: %#v\n", event)
 
 		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessage(event.User, `You are not authorized to share CLs`, params)
+		_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, `You are not authorized to share CLs`, params)
 		if err != nil {
 			b.logf("%s\n", err)
 		}
@@ -244,7 +229,7 @@ func shareCL(b *Bot, event *slack.MessageEvent) {
 			b.logf("could not convert string to int: %v from event: %#v\n", err, event)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -253,12 +238,12 @@ func shareCL(b *Bot, event *slack.MessageEvent) {
 
 		key := datastore.IDKey("GoCL", clNumber, nil)
 		query := datastore.NewQuery("GoCL").Ancestor(key)
-		key, cl, err := b.getCLFromDS(query)
+		key, cl, err := b.getCLFromDS(ctx, query)
 		if err != nil {
 			b.logf("error while retriving CL from the DB: %v\n", err)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -267,7 +252,7 @@ func shareCL(b *Bot, event *slack.MessageEvent) {
 
 		if cl.Tweeted {
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Already tweeted CL %d`, clNumber), params)
+			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Already tweeted CL %d`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -280,7 +265,7 @@ func shareCL(b *Bot, event *slack.MessageEvent) {
 			b.logf("got error while tweeting CL: %d %#v\n", clNumber, err)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -288,12 +273,12 @@ func shareCL(b *Bot, event *slack.MessageEvent) {
 		}
 
 		cl.Tweeted = true
-		err = b.updateCL(key, cl)
+		err = b.updateCL(ctx, key, cl)
 		if err != nil {
 			b.logf("got error while updating CL to datastore: %v", err)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf(`Could not update tweet status for CL %d in the DB`, clNumber), params)
+			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not update tweet status for CL %d in the DB`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -306,20 +291,21 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	tk := time.NewTicker(duration)
 	defer tk.Stop()
 
-	span := b.traceClient.NewSpan("b.GetLastSeenCL")
-	lastID, err := b.GetLastSeenCL()
-	span.Finish()
+	span := b.traceClient.NewSpan("b.MonitorGerrit")
+	ctx := trace.NewContext(context.Background(), span)
+
+	lastID, err := b.GetLastSeenCL(ctx)
 	if err != nil {
 		b.logf("got error while loading last ID from the datastore: %v\n", err)
 		return
 	}
 
-	span = b.traceClient.NewSpan("b.processCLList")
-	lastID = b.processCLList(lastID, span)
+	lastID = b.processCLList(ctx, lastID, span)
 	span.Finish()
 	for range tk.C {
 		span = b.traceClient.NewSpan("b.processCLList")
-		lastID = b.processCLList(lastID, span)
+		ctx := trace.NewContext(context.Background(), span)
+		lastID = b.processCLList(ctx, lastID, span)
 		span.Finish()
 	}
 }

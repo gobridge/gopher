@@ -105,6 +105,9 @@ func main() {
 
 	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace/trace.json"))
 
+	startupSpan := traceClient.NewSpan("b.main")
+	ctx = trace.NewContext(ctx, startupSpan)
+
 	traceHttpClient := traceClient.NewHTTPClient(httpClient)
 
 	slack.SetHTTPClient(traceHttpClient)
@@ -127,12 +130,12 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(ctx, slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(slackBotRTM); err != nil {
 		panic(err)
 	}
 
-	_, err = b.GetLastSeenCL()
+	_, err = b.GetLastSeenCL(ctx)
 	if err != nil {
 		log.Printf("got error: %v\n", err)
 		panic(err)
@@ -192,5 +195,6 @@ func main() {
 	}(traceClient)
 
 	log.Println("Gopher is now running")
+	startupSpan.Finish()
 	select {}
 }

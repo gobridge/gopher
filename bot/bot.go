@@ -2,6 +2,7 @@ package bot
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -16,7 +17,6 @@ import (
 	"cloud.google.com/go/trace"
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/nlopes/slack"
-	"golang.org/x/net/context"
 )
 
 type (
@@ -52,10 +52,11 @@ type (
 		slackBotAPI *slack.Client
 		twitterAPI  *anaconda.TwitterApi
 		logf        Logger
-		ctx         context.Context
 		dsClient    *datastore.Client
 		traceClient *trace.Client
 	}
+
+	slackHandler func(context.Context, *Bot, *slack.MessageEvent)
 )
 
 // Init must be called before anything else in order to initialize the bot
@@ -63,10 +64,12 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	span := b.traceClient.NewSpan("b.Init")
 	defer span.Finish()
 
+	ctx := trace.NewContext(context.Background(), span)
+
 	b.logf("Determining bot / user IDs")
 
 	childSpan := span.NewChild("slackApi.GetUsers")
-	users, err := b.slackBotAPI.GetUsers()
+	users, err := b.slackBotAPI.GetUsersContext(ctx)
 	childSpan.Finish()
 
 	if err != nil {
@@ -99,7 +102,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 
 	b.logf("Determining channels ID\n")
 	childSpan = span.NewChild("slackApi.GetChannels")
-	publicChannels, err := b.slackBotAPI.GetChannels(true)
+	publicChannels, err := b.slackBotAPI.GetChannelsContext(ctx, true)
 	childSpan.Finish()
 	if err != nil {
 		return err
@@ -117,7 +120,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 
 	b.logf("Determining groups ID\n")
 	childSpan = span.NewChild("slackApi.GetGroups")
-	botGroups, err := b.slackBotAPI.GetGroups(true)
+	botGroups, err := b.slackBotAPI.GetGroupsContext(ctx, true)
 	childSpan.Finish()
 	for _, group := range botGroups {
 		groupName := strings.ToLower(group.Name)
@@ -132,7 +135,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
 	params := slack.PostMessageParameters{AsUser: true}
 	childSpan = span.NewChild("b.AnnouncingStartupFinish")
-	_, _, err = b.slackBotAPI.PostMessage(b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
 	childSpan.Finish()
 
 	if err != nil {
@@ -185,7 +188,8 @@ Final thing, #general might be too chatty at times but don't be shy to ask your 
 Now, enjoy the community and have fun.`
 
 	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
-	_, _, err := b.slackBotAPI.PostMessage(event.User.ID, message, params)
+	ctx := trace.NewContext(context.Background(), span)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User.ID, message, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -246,7 +250,7 @@ var (
 	}
 
 	// Bot-directed message reactions / responses from here down
-	botEventTextToFunc = map[string]func(*Bot, *slack.MessageEvent){
+	botEventTextToFunc = map[string]slackHandler{
 		"newbie resources":     newbieResourcesPublic,
 		"newbie resources pvt": newbieResourcesPrivate,
 		"recommended channels": recommendedChannels,
@@ -344,7 +348,7 @@ var (
 		"project layout":       "package layout",
 	}
 
-	botPrefixToFunc = map[string]func(*Bot, *slack.MessageEvent){
+	botPrefixToFunc = map[string]slackHandler{
 		"xkcd:":       xkcd,
 		"library for": searchLibrary,
 		"share cl":    shareCL,
@@ -381,17 +385,19 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	span.SetLabel("eventText", eventText)
 	defer span.Finish()
 
+	ctx := trace.NewContext(context.Background(), span)
+
 	// Reactions to all messages (including those not directed at the bot)
 	// that contain a certain string
 	for needle, reactions := range containsToReactions {
 		if strings.Contains(eventText, needle) {
 			if _, ok := reactWithMessage[needle]; ok {
 				for _, reaction := range reactions {
-					respond(b, event, reaction)
+					respond(ctx, b, event, reaction)
 				}
 			} else {
 				for _, reaction := range reactions {
-					b.reactToEvent(event, reaction)
+					b.reactToEvent(ctx, event, reaction)
 				}
 			}
 			return
@@ -399,26 +405,26 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	if strings.HasPrefix(eventText, "ghd/") {
-		b.godoc(event, "github.com/", 4)
+		b.godoc(ctx, event, "github.com/", 4)
 		return
 	}
 
 	if strings.HasPrefix(eventText, "d/") {
-		b.godoc(event, "", 2)
+		b.godoc(ctx, event, "", 2)
 		return
 	}
 
 	if !strings.Contains(eventText, "nolink") &&
 		event.File != nil &&
 		(event.File.Filetype == "go" || event.File.Filetype == "text") {
-		b.suggestPlayground(event, span)
+		b.suggestPlayground(ctx, event)
 		return
 	}
 
 	// We assume that the user actually wanted to have a code snippet shared
 	if !strings.HasPrefix(eventText, "nolink") &&
 		strings.Count(eventText, "\n") > 9 {
-		b.suggestPlayground2(event, span)
+		b.suggestPlayground2(ctx, event)
 		return
 	}
 
@@ -434,14 +440,14 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// Responses that need some logic behind them
 	if responseFunc, ok := botEventTextToFunc[eventText]; ok {
-		responseFunc(b, event)
+		responseFunc(ctx, b, event)
 		return
 	}
 
 	// Responses that are just a canned string response
 	if responseLines, ok := botEventTextToResponse[eventText]; ok {
 		response := strings.Join(responseLines, "\n")
-		respond(b, event, response)
+		respond(ctx, b, event, response)
 		return
 	}
 
@@ -449,7 +455,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if key, ok := botEventTextToResponseAliases[eventText]; ok {
 		if responseLines, ok := botEventTextToResponse[key]; ok {
 			response := strings.Join(responseLines, "\n")
-			respond(b, event, response)
+			respond(ctx, b, event, response)
 			return
 		}
 
@@ -461,7 +467,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	for needle, reactions := range botContainsToReactions {
 		if strings.Contains(eventText, needle) {
 			for _, reaction := range reactions {
-				b.reactToEvent(event, reaction)
+				b.reactToEvent(ctx, event, reaction)
 			}
 			return
 		}
@@ -471,7 +477,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	for prefix, reactions := range botHasPrefixToReactions {
 		if strings.HasPrefix(eventText, prefix) {
 			for _, reaction := range reactions {
-				b.reactToEvent(event, reaction)
+				b.reactToEvent(ctx, event, reaction)
 			}
 			return
 		}
@@ -480,21 +486,21 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	// More responses that need some logic behind them
 	for prefix, responseFunc := range botPrefixToFunc {
 		if strings.HasPrefix(eventText, prefix) {
-			responseFunc(b, event)
+			responseFunc(ctx, b, event)
 			return
 		}
 	}
 }
 
-func newbieResourcesPublic(b *Bot, event *slack.MessageEvent) {
-	newbieResources(b, event, false)
+func newbieResourcesPublic(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+	newbieResources(ctx, b, event, false)
 }
 
-func newbieResourcesPrivate(b *Bot, event *slack.MessageEvent) {
-	newbieResources(b, event, true)
+func newbieResourcesPrivate(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+	newbieResources(ctx, b, event, true)
 }
 
-func newbieResources(b *Bot, event *slack.MessageEvent, private bool) {
+func newbieResources(ctx context.Context, b *Bot, event *slack.MessageEvent, private bool) {
 	newbieResources := slack.Attachment{
 		Text: `First you should take the language tour: <http://tour.golang.org/>
 
@@ -531,14 +537,14 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 	if private {
 		whereTo = event.User
 	}
-	_, _, err := b.slackBotAPI.PostMessage(whereTo, "Here are some resources you should check out if you are learning / new to Go:", params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, whereTo, "Here are some resources you should check out if you are learning / new to Go:", params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func recommendedChannels(b *Bot, event *slack.MessageEvent) {
+func recommendedChannels(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	message := slack.Attachment{}
 
 	for idx, val := range b.channels {
@@ -550,19 +556,19 @@ func recommendedChannels(b *Bot, event *slack.MessageEvent) {
 
 	params := slack.PostMessageParameters{AsUser: true}
 	params.Attachments = []slack.Attachment{message}
-	_, _, err := b.slackBotAPI.PostMessage(event.User, "Here is a list of recommended channels:", params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, "Here is a list of recommended channels:", params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func (b *Bot) suggestPlayground(event *slack.MessageEvent, span *trace.Span) {
+func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) {
 	if event.File == nil || b.devMode {
 		return
 	}
 
-	info, _, _, err := b.slackBotAPI.GetFileInfo(event.File.ID, 0, 0)
+	info, _, _, err := b.slackBotAPI.GetFileInfoContext(ctx, event.File.ID, 0, 0)
 	if err != nil {
 		b.logf("error while getting file info: %v", err)
 		return
@@ -575,8 +581,8 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent, span *trace.Span) {
 	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Authorization", "Bearer "+b.token)
-	ctx := trace.NewContext(context.Background(), span)
 	req = req.WithContext(ctx)
+
 	resp, err := b.client.Do(req)
 	if err != nil {
 		b.logf("error while fetching the file %v\n", err)
@@ -621,20 +627,20 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent, span *trace.Span) {
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackBotAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 
-	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you uploaded a Go file. To facilitate collaboration and make this easier for others to share back the snippet, please consider using: <https://play.golang.org>. If you wish to not link against the playground, please use "nolink" in the message. Thank you.`, params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, `Hello. I've noticed you uploaded a Go file. To facilitate collaboration and make this easier for others to share back the snippet, please consider using: <https://play.golang.org>. If you wish to not link against the playground, please use "nolink" in the message. Thank you.`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func (b *Bot) suggestPlayground2(event *slack.MessageEvent, span *trace.Span) {
+func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent) {
 	if b.devMode {
 		return
 	}
@@ -671,9 +677,8 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent, span *trace.Span) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Content-Length", strconv.Itoa(len(eventText)))
-	ctx := trace.NewContext(context.Background(), span)
-	req = req.WithContext(ctx)
 
+	req = req.WithContext(ctx)
 	resp, err := b.client.Do(req)
 	if err != nil {
 		b.logf("failed to get playground link: %v", err)
@@ -693,32 +698,32 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent, span *trace.Span) {
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackBotAPI.PostMessage(event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 
-	_, _, err = b.slackBotAPI.PostMessage(event.User, `Hello. I've noticed you've written a large block of text (more than 9 lines). To make the conversation easier to follow the conversation and facilitate collaboration, please consider using: <https://play.golang.org> if you shared code. If you wish to not link against the playground, please start the message with "nolink". Thank you.`, params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, `Hello. I've noticed you've written a large block of text (more than 9 lines). To make the conversation easier to follow the conversation and facilitate collaboration, please consider using: <https://play.golang.org> if you shared code. If you wish to not link against the playground, please start the message with "nolink". Thank you.`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func respond(b *Bot, event *slack.MessageEvent, response string) {
+func respond(ctx context.Context, b *Bot, event *slack.MessageEvent, response string) {
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, response)
 		return
 	}
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, response, params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, response, params)
 	if err != nil {
 		b.logf("%s\n", err)
 	}
 }
 
-func searchLibrary(b *Bot, event *slack.MessageEvent) {
+func searchLibrary(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	searchTerm := strings.ToLower(event.Text)
 	if idx := strings.Index(searchTerm, "library for"); idx != -1 {
 		searchTerm = event.Text[idx+11:]
@@ -741,7 +746,7 @@ func searchLibrary(b *Bot, event *slack.MessageEvent) {
 	}
 	searchTerm = url.QueryEscape(searchTerm)
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -754,7 +759,7 @@ var xkcdAliases = map[string]int{
 	"optimization": 1691,
 }
 
-func xkcd(b *Bot, event *slack.MessageEvent) {
+func xkcd(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	// repeats some earlier work but oh well
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
 	eventText = b.trimBot(eventText)
@@ -782,28 +787,28 @@ func xkcd(b *Bot, event *slack.MessageEvent) {
 		UnfurlLinks: true,
 		UnfurlMedia: true,
 	}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, imageLink, params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, imageLink, params)
 	if err != nil {
 		b.logf("error while sending xkcd message: %s\n", err)
 		return
 	}
 }
 
-func (b *Bot) godoc(event *slack.MessageEvent, prefix string, position int) {
+func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix string, position int) {
 	link := event.Text[position:]
 	if strings.Contains(link, " ") {
 		link = link[:strings.Index(link, " ")]
 	}
 
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func (b *Bot) reactToEvent(event *slack.MessageEvent, reaction string) {
+func (b *Bot) reactToEvent(ctx context.Context, event *slack.MessageEvent, reaction string) {
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, reaction)
 		return
@@ -812,23 +817,23 @@ func (b *Bot) reactToEvent(event *slack.MessageEvent, reaction string) {
 		Channel:   event.Channel,
 		Timestamp: event.Timestamp,
 	}
-	err := b.slackBotAPI.AddReaction(reaction, item)
+	err := b.slackBotAPI.AddReactionContext(ctx, reaction, item)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func botVersion(b *Bot, event *slack.MessageEvent) {
+func botVersion(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessage(event.User, fmt.Sprintf("My version is: %s", b.version), params)
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf("My version is: %s", b.version), params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
 	}
 }
 
-func flipCoin(b *Bot, event *slack.MessageEvent) {
+func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	buff := make([]byte, 1, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
@@ -839,7 +844,7 @@ func flipCoin(b *Bot, event *slack.MessageEvent) {
 		result = "tail"
 	}
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackBotAPI.PostMessage(event.Channel, fmt.Sprintf("%s", result), params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, fmt.Sprintf("%s", result), params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -847,9 +852,8 @@ func flipCoin(b *Bot, event *slack.MessageEvent) {
 }
 
 // NewBot will create a new Slack bot
-func NewBot(ctx context.Context, slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *trace.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *trace.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
-		ctx:         ctx,
 		gerritLink:  gerritLink,
 		name:        name,
 		token:       token,
