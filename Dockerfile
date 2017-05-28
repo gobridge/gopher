@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM alpine:3.6
 MAINTAINER Florin Patan "florinpatan@gmail.com"
 
 WORKDIR /
@@ -12,6 +12,8 @@ RUN apk add --update ca-certificates \
 
 # Binary
 ADD gopher /gopher
+
+EXPOSE 8081
 
 # Runtime
 CMD ["/gopher"]

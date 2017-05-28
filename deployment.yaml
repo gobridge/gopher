@@ -13,6 +13,9 @@ spec:
   revisionHistoryLimit: 1
   minReadySeconds: 10
   strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 100%
     type: RollingUpdate
   template:
     metadata:
@@ -43,14 +46,12 @@ spec:
           timeoutSeconds: 1
         resources:
           requests:
-            cpu: 400m
-            memory: 150Mi
+            cpu: 350m
+            memory: 120Mi
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: false
         env:
-#          - name: GOOGLE_APPLICATION_CREDENTIALS
-#            value: /tmp/datastore.json
           - name: GOPHERS_SLACK_BOT_NAME
             valueFrom:
               secretKeyRef:
