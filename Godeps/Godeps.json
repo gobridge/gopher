@@ -91,8 +91,8 @@
 		},
 		{
 			"ImportPath": "github.com/nlopes/slack",
-			"Comment": "v0.0.1-210-g72d15a0",
-			"Rev": "72d15a0fc0b773a59c00f78b9e7d97eeb8c4281f"
+			"Comment": "v0.1.0-2-gb5c480d",
+			"Rev": "b5c480d57859099b2050e071f2df92c2b3170ced"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
