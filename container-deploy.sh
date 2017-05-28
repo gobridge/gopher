@@ -17,7 +17,7 @@ gcloud docker -- push eu.gcr.io/${PROJECT_NAME}/bot
 
 echo ${KUBE_CA_PEM} | base64 --decode -i > ${HOME}/kube_ca.pem
 kubectl config set-cluster default-cluster --server=${KUBE_URL} --certificate-authority="${HOME}/kube_ca.pem"
-kubectl config set-credentials default-admin --token=`echo ${RAW_KUBE_TOKEN} | base64 --decode -i`
+kubectl config set-credentials default-admin --token=`echo ${KUBE_TOKEN} | base64 --decode -i`
 kubectl config set-context default-system --cluster=default-cluster --user=default-admin --namespace default
 kubectl config use-context default-system
 
