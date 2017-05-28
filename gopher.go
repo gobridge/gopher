@@ -88,8 +88,6 @@ func main() {
 		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
 	}
 
-	slackBotAPI := slack.New(slackBotToken)
-
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
@@ -102,6 +100,16 @@ func main() {
 		},
 	}
 
+	ctx := context.Background()
+	projectID := "gophers-slack-bot"
+
+	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace/trace.json"))
+
+	traceHttpClient := traceClient.NewHTTPClient(httpClient)
+
+	slack.SetHTTPClient(traceHttpClient)
+	slackBotAPI := slack.New(slackBotToken)
+
 	botName = strings.TrimPrefix(botName, "@")
 
 	anaconda.SetConsumerKey(twitterConsumerKey)
@@ -113,18 +121,11 @@ func main() {
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
-	projectID := "gophers-slack-bot"
-
-	ctx := context.Background()
 	dsClient, err := datastore.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/datastore/datastore.json"))
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	defer dsClient.Close()
-
-	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace/trace.json"))
-
-	traceHttpClient := traceClient.NewHTTPClient(httpClient)
 
 	b := bot.NewBot(ctx, slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(slackBotRTM); err != nil {
