@@ -1,6 +1,7 @@
 .idea/workspace.xml
 .idea/misc.xml
 .idea/libraries
+sa.yaml
 secrets.yaml
 secrets-datastore.yaml
 secrets-trace.yaml

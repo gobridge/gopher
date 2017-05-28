@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/trace"
 	"github.com/nlopes/slack"
 	"google.golang.org/api/iterator"
 )
@@ -119,9 +121,11 @@ func (b *Bot) updateCL(key *datastore.Key, cl *storedCL) error {
 	return err
 }
 
-func (b *Bot) processCLList(lastID int) int {
+func (b *Bot) processCLList(lastID int, span *trace.Span) int {
 	req, err := http.NewRequest("GET", b.gerritLink, nil)
 	req.Header.Add("User-Agent", "Gophers Slack bot")
+	ctx := trace.NewContext(context.Background(), span)
+	req = req.WithContext(ctx)
 	resp, err := b.client.Do(req)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -311,11 +315,11 @@ func (b *Bot) MonitorGerrit(duration time.Duration) {
 	}
 
 	span = b.traceClient.NewSpan("b.processCLList")
-	lastID = b.processCLList(lastID)
+	lastID = b.processCLList(lastID, span)
 	span.Finish()
 	for range tk.C {
 		span = b.traceClient.NewSpan("b.processCLList")
-		lastID = b.processCLList(lastID)
+		lastID = b.processCLList(lastID, span)
 		span.Finish()
 	}
 }

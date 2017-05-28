@@ -411,14 +411,14 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if !strings.Contains(eventText, "nolink") &&
 		event.File != nil &&
 		(event.File.Filetype == "go" || event.File.Filetype == "text") {
-		b.suggestPlayground(event)
+		b.suggestPlayground(event, span)
 		return
 	}
 
 	// We assume that the user actually wanted to have a code snippet shared
 	if !strings.HasPrefix(eventText, "nolink") &&
 		strings.Count(eventText, "\n") > 9 {
-		b.suggestPlayground2(event)
+		b.suggestPlayground2(event, span)
 		return
 	}
 
@@ -557,7 +557,7 @@ func recommendedChannels(b *Bot, event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
+func (b *Bot) suggestPlayground(event *slack.MessageEvent, span *trace.Span) {
 	if event.File == nil || b.devMode {
 		return
 	}
@@ -575,6 +575,8 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Authorization", "Bearer "+b.token)
+	ctx := trace.NewContext(context.Background(), span)
+	req = req.WithContext(ctx)
 	resp, err := b.client.Do(req)
 	if err != nil {
 		b.logf("error while fetching the file %v\n", err)
@@ -598,6 +600,7 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Content-Length", strconv.Itoa(len(file)))
+	req = req.WithContext(ctx)
 
 	resp, err = b.client.Do(req)
 	if err != nil {
@@ -631,7 +634,7 @@ func (b *Bot) suggestPlayground(event *slack.MessageEvent) {
 	}
 }
 
-func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
+func (b *Bot) suggestPlayground2(event *slack.MessageEvent, span *trace.Span) {
 	if b.devMode {
 		return
 	}
@@ -668,6 +671,8 @@ func (b *Bot) suggestPlayground2(event *slack.MessageEvent) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Content-Length", strconv.Itoa(len(eventText)))
+	ctx := trace.NewContext(context.Background(), span)
+	req = req.WithContext(ctx)
 
 	resp, err := b.client.Do(req)
 	if err != nil {
