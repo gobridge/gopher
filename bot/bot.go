@@ -59,16 +59,16 @@ type (
 	slackHandler func(context.Context, *Bot, *slack.MessageEvent)
 )
 
-// Init must be called before anything else in order to initialize the bot
-func (b *Bot) Init(rtm *slack.RTM) error {
-	span := b.traceClient.NewSpan("b.Init")
-	defer span.Finish()
+var welcomeMessage = ""
 
-	ctx := trace.NewContext(context.Background(), span)
+// Init must be called before anything else in order to initialize the bot
+func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error {
+	initSpan := span.NewChild("b.Init")
+	defer initSpan.Finish()
 
 	b.logf("Determining bot / user IDs")
 
-	childSpan := span.NewChild("slackApi.GetUsers")
+	childSpan := initSpan.NewChild("slackApi.GetUsers")
 	users, err := b.slackBotAPI.GetUsersContext(ctx)
 	childSpan.Finish()
 
@@ -101,7 +101,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	users = nil
 
 	b.logf("Determining channels ID\n")
-	childSpan = span.NewChild("slackApi.GetChannels")
+	childSpan = initSpan.NewChild("slackApi.GetChannels")
 	publicChannels, err := b.slackBotAPI.GetChannelsContext(ctx, true)
 	childSpan.Finish()
 	if err != nil {
@@ -119,7 +119,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 	publicChannels = nil
 
 	b.logf("Determining groups ID\n")
-	childSpan = span.NewChild("slackApi.GetGroups")
+	childSpan = initSpan.NewChild("slackApi.GetGroups")
 	botGroups, err := b.slackBotAPI.GetGroupsContext(ctx, true)
 	childSpan.Finish()
 	for _, group := range botGroups {
@@ -134,7 +134,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 
 	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
 	params := slack.PostMessageParameters{AsUser: true}
-	childSpan = span.NewChild("b.AnnouncingStartupFinish")
+	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
 	_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
 	childSpan.Finish()
 
@@ -142,19 +142,7 @@ func (b *Bot) Init(rtm *slack.RTM) error {
 		b.logf(`failed to deploy version: %s`, b.version)
 	}
 
-	return err
-}
-
-// TeamJoined is called when the someone joins the team
-func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
-	span := b.traceClient.NewSpan("b.TeamJoined")
-	defer span.Finish()
-
-	if b.devMode {
-		return
-	}
-
-	message := `Hello ` + event.User.Name + `,
+	welcomeMessage = `,
 
 
 Welcome to the Gophers Slack channel.
@@ -169,10 +157,10 @@ Here's a list of a few channels you could join:
 		if !val.welcome {
 			continue
 		}
-		message += `<` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
+		welcomeMessage += `<` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
 	}
 
-	message += `
+	welcomeMessage += `
 
 If you want more suggestions, type "recommended channels".
 There are quite a few other channels, depending on your interests or location (we have city / country wide channels).
@@ -182,10 +170,26 @@ To share code, you should use: https://play.golang.org/ as it makes it easy for 
 
 If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
 
+If you are interested in a free copy of the Go Web Programming book by Sau Sheong Chang, @sausheong, please send him an email at sausheong@gmail.com
+
 Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
 
 
 Now, enjoy the community and have fun.`
+
+	return err
+}
+
+// TeamJoined is called when the someone joins the team
+func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
+	span := b.traceClient.NewSpan("b.TeamJoined")
+	defer span.Finish()
+
+	if b.devMode {
+		return
+	}
+
+	message := `Hello ` + event.User.Name + welcomeMessage
 
 	params := slack.PostMessageParameters{AsUser: true, LinkNames: 1}
 	ctx := trace.NewContext(context.Background(), span)

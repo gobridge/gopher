@@ -131,7 +131,7 @@ func main() {
 	defer dsClient.Close()
 
 	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
-	if err := b.Init(slackBotRTM); err != nil {
+	if err := b.Init(ctx, slackBotRTM, startupSpan); err != nil {
 		panic(err)
 	}
 
