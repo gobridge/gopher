@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/trace"
@@ -54,6 +55,8 @@ type (
 		logf        Logger
 		dsClient    *datastore.Client
 		traceClient *trace.Client
+
+		goTimeLastNotified time.Time
 	}
 
 	slackHandler func(context.Context, *Bot, *slack.MessageEvent)
@@ -71,6 +74,10 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 	childSpan := initSpan.NewChild("slackApi.GetUsers")
 	users, err := b.slackBotAPI.GetUsersContext(ctx)
 	childSpan.Finish()
+
+	if err != nil {
+		panic(err)
+	}
 
 	if err != nil {
 		return err
