@@ -10,3 +10,4 @@ datastore.json
 kubeconfig.yaml
 kubeconfig
 gopher
+dd-agent.yaml
