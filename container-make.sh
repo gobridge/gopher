@@ -21,7 +21,7 @@ docker run --rm \
         -e GOPATH=${CONTAINER_GOPATH} \
         -e CGO_ENABLED=0 \
         -w "${CONTAINER_PROJECT_DIR}" \
-        golang:1.9beta2-alpine3.6 \
+        golang:1.9rc1-alpine3.6 \
         go build -v -tags netgo -installsuffix netgo -ldflags "-X main.botVersion=${CONTAINER_TAG}" -o gopher ${PROJECT_NAME}
 
 docker build -f ${PROJECT_DIR}/Dockerfile \
