@@ -343,7 +343,7 @@ var (
 			`- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher`,
 		},
 		"gopath": {
-			"Your project should be structure as the following:",
+			"Your project should be structured as follows:",
 			"```GOPATH=~/go",
 			"~/go/src/sourcecontrol/username/project/```",
 			"Whilst you _can_ get around the GOPATH, it's ill-advised. Read more about the GOPATH here: https://github.com/golang/go/wiki/GOPATH",
