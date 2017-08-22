@@ -346,7 +346,7 @@ var (
 			"Your project should be structure as the following:",
 			"```GOPATH=~/go",
 			"~/go/src/sourcecontrol/username/project/```",
-			"Whilst you _can_ get around the GOPATH, I strongly advice you don't, and work with it. Read more about the GOPATH here: https://github.com/golang/go/wiki/GOPATH",
+			"Whilst you _can_ get around the GOPATH, it's ill-advised. Read more about the GOPATH here: https://github.com/golang/go/wiki/GOPATH",
 		},
 	}
 
