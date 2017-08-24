@@ -247,6 +247,8 @@ var (
 		"彡": {"┬─┬ノ( º _ ºノ)"},
 		"my adorable little gophers": {"gopher"},
 		"bbq":       {"bbqgopher"},
+		"buffalo":   {"gobuffalo"},
+		"gobuffalo": {"gobuffalo"},
 		"ghost":     {"ghost"},
 		"ermergerd": {"dragon"},
 		"ermahgerd": {"dragon"},
