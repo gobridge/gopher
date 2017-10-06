@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -77,7 +76,6 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 	}
 
 	b.msgprefix = strings.ToLower("<@" + b.id + ">")
-
 
 	b.logf("Determining channels ID\n")
 	childSpan := initSpan.NewChild("slackApi.GetChannels")
