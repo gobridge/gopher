@@ -683,7 +683,7 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 		return
 	}
 
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
