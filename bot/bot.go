@@ -71,44 +71,16 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 
 	b.logf("Determining bot / user IDs")
 
-	childSpan := initSpan.NewChild("slackApi.GetUsers")
-	users, err := b.slackBotAPI.GetUsersContext(ctx)
-	childSpan.Finish()
-
-	if err != nil {
-		panic(err)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	b.users = map[string]string{}
-
-	for _, user := range users {
-		switch user.Name {
-		case "dlsniper":
-			b.users["dlsniper"] = user.ID
-		case "dominikh":
-			b.users["dominikh"] = user.ID
-		case b.name:
-			if user.IsBot {
-				b.id = user.ID
-			}
-		default:
-			continue
-		}
-	}
-	if b.id == "" {
-		return errors.New("could not find bot in the list of names, check if the bot is called \"" + b.name + "\" ")
+	b.id = "U1XK0CWSZ"
+	b.users = map[string]string{
+		"dlsniper": "U03L9MPTE",
 	}
 
 	b.msgprefix = strings.ToLower("<@" + b.id + ">")
 
-	users = nil
 
 	b.logf("Determining channels ID\n")
-	childSpan = initSpan.NewChild("slackApi.GetChannels")
+	childSpan := initSpan.NewChild("slackApi.GetChannels")
 	publicChannels, err := b.slackBotAPI.GetChannelsContext(ctx, true)
 	childSpan.Finish()
 	if err != nil {
