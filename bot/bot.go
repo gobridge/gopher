@@ -406,7 +406,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// We assume that the user actually wanted to have a code snippet shared
 	if !strings.HasPrefix(eventText, "nolink") &&
-		strings.Count(eventText, "\n") > 9 {
+		strings.Contains(eventText, "package main") && // Need a main package and function to run
+		strings.Contains(eventText, "func main()" {
 		b.suggestPlayground2(ctx, event)
 		return
 	}
