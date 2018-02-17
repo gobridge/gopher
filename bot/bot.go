@@ -636,8 +636,7 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 	// Be nice and try to first figure out if there's any possible code in there
 	start := strings.Index(originalEventText, "package main")
 	end := strings.LastIndex(originalEventText, "}")
-
-	if start == -1 || end == -1 {
+	if end == -1 {
 		return // return because it won't run on the playground
 	}
 
