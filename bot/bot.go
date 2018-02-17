@@ -637,7 +637,7 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 	start := strings.Index(originalEventText, "package main")
 	end := strings.LastIndex(originalEventText, "}")
 	if end == -1 {
-		return // return because it won't run on the playground
+		return // playground won't run without a brace to close the main function body
 	}
 
 	runes := []rune(originalEventText)
