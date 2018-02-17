@@ -406,7 +406,8 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// We assume that the user actually wanted to have a code snippet shared
 	if !strings.HasPrefix(eventText, "nolink") &&
-		strings.Count(eventText, "\n") > 9 {
+		strings.Contains(eventText, "package main") && // Need a main package and function to run
+		strings.Contains(eventText, "func main()" {
 		b.suggestPlayground2(ctx, event)
 		return
 	}
@@ -633,6 +634,15 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 	eventText := ""
 
 	// Be nice and try to first figure out if there's any possible code in there
+	start := strings.Index(originalEventText, "package main")
+	end := strings.LastIndex(originalEventText, "}")
+	if end == -1 {
+		return // playground won't run without a brace to close the main function body
+	}
+
+	runes := []rune(originalEventText)
+	eventText = string(runes[start : end+1]) // start at the package declaration and end with the last close
+
 	/* This has a bug so don't be nice for now
 	for dotPos := strings.Index(originalEventText, "```"); dotPos != -1;  dotPos = strings.Index(originalEventText, "```") {
 		originalEventText = originalEventText[dotPos+3:]
