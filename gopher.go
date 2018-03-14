@@ -25,6 +25,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -51,6 +52,8 @@ var (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	log.SetFlags(log.Lshortfile)
 
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
@@ -194,7 +197,7 @@ func main() {
 		log.Fatal(s.ListenAndServe())
 	}(traceClient)
 
-	go func(){
+	go func() {
 		gotimefm := time.NewTicker(1 * time.Minute)
 		defer gotimefm.Stop()
 
