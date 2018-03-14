@@ -485,7 +485,7 @@ func newbieResourcesPrivate(ctx context.Context, b *Bot, event *slack.MessageEve
 
 func newbieResources(ctx context.Context, b *Bot, event *slack.MessageEvent, private bool) {
 	newbieResources := slack.Attachment{
-		Text: `First you should take the language tour: <http://tour.golang.org/>
+		Text: `First you should take the language tour: <https://tour.golang.org/>
 
 Then, you should visit:
  - <https://golang.org/doc/code.html> to learn how to organize your Go workspace
