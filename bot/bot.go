@@ -149,6 +149,8 @@ If you are new to Go and want a copy of the Go In Action book, https://www.manni
 
 If you are interested in a free copy of the Go Web Programming book by Sau Sheong Chang, @sausheong, please send him an email at sausheong@gmail.com
 
+In case you want to customize your profile picture, you can use https://gopherize.me/ to create a custom gopher.
+
 Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
 
 
