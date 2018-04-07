@@ -350,6 +350,9 @@ var (
 	}
 )
 
+// Suggest playground if 9+ newlines are found between backticks
+var regexLongSnippet = regexp.MustCompile(`(?s)\x60\x60\x60.*\n.*\n.*\n.*\n.*\n.*\n.*\n.*\n.*\n\x60\x60\x60`
+
 // HandleMessage will process the incoming message and repspond appropriately
 func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	if event.BotID != "" || event.User == "" || event.SubType == "bot_message" {
@@ -407,8 +410,7 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	}
 
 	// We assume that the user actually wanted to have a code snippet shared
-	if !strings.HasPrefix(eventText, "nolink") &&
-		strings.Count(eventText, "\n") > 9 {
+	if !strings.HasPrefix(eventText, "nolink") && regexLongSnippet.Match(eventText) {
 		b.suggestPlayground2(ctx, event)
 		return
 	}
