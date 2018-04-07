@@ -798,7 +798,9 @@ func songLinkHandler(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	}
 }
 
-// func songlink(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+// songlink inspects the message for Spotify, Soundcloud, Tidal links
+// It returns empty string when no reply is needed
+// Otherwise it returns the reply text and params configured for threaded reply
 func songlink(event *slack.MessageEvent) (string, slack.PostMessageParameters) {
 	if regexSongNolink.MatchString(event.Text) || !regexSongLink.MatchString(event.Text) {
 		return "", slack.PostMessageParameters{}
