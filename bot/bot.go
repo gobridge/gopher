@@ -372,6 +372,9 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	ctx := trace.NewContext(context.Background(), span)
 
+	// On messages containing song links, share alternate music platforms in thread
+	songLinkHandler(ctx, b, event)
+
 	// Reactions to all messages (including those not directed at the bot)
 	// that contain a certain string
 	for needle, reactions := range containsToReactions {
@@ -778,6 +781,42 @@ func xkcd(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 		b.logf("error while sending xkcd message: %s\n", err)
 		return
 	}
+}
+
+var regexSongNolink = regexp.MustCompile(`(?i)song\.link`)
+var regexSongLink = regexp.MustCompile(`(i?)https?://(open\.spotify\.com|soundcloud\.com|tidal.com)/[^\s]+`)
+
+func songLinkHandler(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+	msg, params := songlink(event)
+	if msg == "" {
+		return
+	}
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, msg, params)
+	if err != nil {
+		b.logf("error while replying with song link: %s\n", err)
+		return
+	}
+}
+
+// func songlink(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+func songlink(event *slack.MessageEvent) (string, slack.PostMessageParameters) {
+	if regexSongNolink.MatchString(event.Text) || !regexSongLink.MatchString(event.Text) {
+		return "", slack.PostMessageParameters{}
+	}
+	var out string
+	links := regexSongLink.FindAllString(event.Text, -1)
+	for _, link := range links {
+		out = fmt.Sprintf("%s\n<https://song.link/%s>", out, link)
+	}
+	out = strings.TrimSpace(out)
+
+	params := slack.PostMessageParameters{
+		AsUser:          true,
+		UnfurlLinks:     false,
+		UnfurlMedia:     false,
+		ThreadTimestamp: event.ThreadTimestamp,
+	}
+	return out, params
 }
 
 func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix string, position int) {
