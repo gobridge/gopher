@@ -59,6 +59,15 @@ func TestSongLink(t *testing.T) {
 		}
 	})
 
+	t.Run("detects spotify:album:54OM8icMyeUMzhpJn8Igmk", func(t *testing.T) {
+		in := testMsg("spotify:album:54OM8icMyeUMzhpJn8Igmk")
+		expected := "<https://song.link/spotify:album:54OM8icMyeUMzhpJn8Igmk>"
+		msg, _ := songlink(in)
+		if msg != expected {
+			t.Errorf("expected: %q\nactual:%q", expected, msg)
+		}
+	})
+
 	t.Run("detects https://soundcloud.com/a/b", func(t *testing.T) {
 		in := testMsg("check out https://soundcloud.com/lematos/highway-64-1")
 		expected := "<https://song.link/https://soundcloud.com/lematos/highway-64-1>"
