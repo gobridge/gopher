@@ -44,6 +44,15 @@ func TestSongLink(t *testing.T) {
 		}
 	})
 
+	t.Run("ignores `Wait, does Slack recognize the Spotify URIs now?`", func(t *testing.T) {
+		in := testMsg("Wait, does Slack recognize the Spotify URIs now?")
+		expected := ""
+		msg, _ := songlink(in)
+		if msg != expected {
+			t.Errorf("expected: %q\nactual:%q", expected, msg)
+		}
+	})
+
 	t.Run("detects http://open.spotify.com/a", func(t *testing.T) {
 		in := testMsg("[drum and bass, uk hardcore, jazz, gospel] https://open.spotify.com/track/0nypsuS2jtogLaJDcRQ4Ya?si=wqgnW8jeS9aYEqWagrDadQ")
 		expected := "<https://song.link/https://open.spotify.com/track/0nypsuS2jtogLaJDcRQ4Ya?si=wqgnW8jeS9aYEqWagrDadQ>"
