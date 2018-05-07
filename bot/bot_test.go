@@ -35,6 +35,15 @@ func TestSongLink(t *testing.T) {
 		}
 	})
 
+	t.Run("skips https://SONG.LINK/https://open.spotify.com/track", func(t *testing.T) {
+		in := testMsg("<https://SONG.LINK/https://open.spotify.com/track/0nypsuS2jtogLaJDcRQ4Ya?si=wqgnW8jeS9aYEqWagrDadQ>")
+		expected := ""
+		msg, _ := songlink(in)
+		if msg != expected {
+			t.Errorf("expected: %q\nactual:%q", expected, msg)
+		}
+	})
+
 	t.Run("skips nolink https://open.spotify.com/track", func(t *testing.T) {
 		in := testMsg("noLink <https://open.spotify.com/track/0nypsuS2jtogLaJDcRQ4Ya?si=wqgnW8jeS9aYEqWagrDadQ>")
 		expected := ""

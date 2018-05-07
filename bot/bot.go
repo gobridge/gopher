@@ -784,7 +784,7 @@ func xkcd(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 }
 
 var regexSongNolink = regexp.MustCompile(`(?i)(nolink|song\.link)`)
-var regexSongLink = regexp.MustCompile(`(i?)(open\.spotify\.com|spotify:[a-z]|soundcloud\.com|tidal\.com)/[^\s]+`)
+var regexSongLink = regexp.MustCompile(`(?i)(?:https?://)?(open\.spotify\.com/|spotify:|soundcloud\.com/|tidal\.com/)[^\s]+`)
 
 func songLinkHandler(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	msg, params := songlink(event)
@@ -805,6 +805,7 @@ func songlink(event *slack.MessageEvent) (string, slack.PostMessageParameters) {
 	if regexSongNolink.MatchString(event.Text) || !regexSongLink.MatchString(event.Text) {
 		return "", slack.PostMessageParameters{}
 	}
+
 	var out string
 	links := regexSongLink.FindAllString(event.Text, -1)
 	for _, link := range links {
