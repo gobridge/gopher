@@ -310,6 +310,7 @@ var (
 			`- "newbie resources pvt" -> get a list of newbie resources as a private message`,
 			`- "recommended channels" -> get a list of recommended channels`,
 			`- "oss help" -> help the open-source community`,
+			`- "books" -> some interesting books to learn go`,
 			`- "work with forks" -> how to work with forks of packages`,
 			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
 			`- "block forever" -> how to block forever`,
