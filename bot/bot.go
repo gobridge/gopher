@@ -215,18 +215,18 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 var (
 	// Generic responses to all messages
 	containsToReactions = map[string][]string{
-		"︵": {"┬─┬ノ( º _ ºノ)"},
-		"彡": {"┬─┬ノ( º _ ºノ)"},
+		"︵":                          {"┬─┬ノ( º _ ºノ)"},
+		"彡":                          {"┬─┬ノ( º _ ºノ)"},
 		"my adorable little gophers": {"gopher"},
-		"bbq":       {"bbqgopher"},
-		"buffalo":   {"gobuffalo"},
-		"gobuffalo": {"gobuffalo"},
-		"ghost":     {"ghost"},
-		"ermergerd": {"dragon"},
-		"ermahgerd": {"dragon"},
-		"dragon":    {"dragon"},
-		"spacex":    {"rocket"},
-		"beer me":   {"beer", "beers"},
+		"bbq":                        {"bbqgopher"},
+		"buffalo":                    {"gobuffalo"},
+		"gobuffalo":                  {"gobuffalo"},
+		"ghost":                      {"ghost"},
+		"ermergerd":                  {"dragon"},
+		"ermahgerd":                  {"dragon"},
+		"dragon":                     {"dragon"},
+		"spacex":                     {"rocket"},
+		"beer me":                    {"beer", "beers"},
 	}
 
 	reactWithMessage = map[string]struct{}{
@@ -635,23 +635,7 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 	eventText := ""
 
 	// Be nice and try to first figure out if there's any possible code in there
-	/* This has a bug so don't be nice for now
-	for dotPos := strings.Index(originalEventText, "```"); dotPos != -1;  dotPos = strings.Index(originalEventText, "```") {
-		originalEventText = originalEventText[dotPos+3:]
-		nextTripleDots := strings.Index(eventText, "```")
-		if nextTripleDots == -1 {
-			eventText += originalEventText
-		} else {
-			eventText += originalEventText[:nextTripleDots]
-			originalEventText = originalEventText[nextTripleDots+3:]
-		}
-	}
-	*/
-
-	// Well there 's so much we can do here, the user really should have a better etiquette and not post walls of text
-	if eventText == "" {
-		eventText = originalEventText
-	}
+	eventText = postToPlayground(originalEventText)
 
 	requestBody := bytes.NewBufferString(eventText)
 
@@ -835,6 +819,36 @@ func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 		b.logf("%s\n", err)
 		return
 	}
+}
+
+// postToPlayground converts the text of a post into code for the playground. It is not perfect but works most of the time.
+// Text outside of ``` quotes is converted into a comment and included in the code, everything inside of those quotes is
+// considered code and pasted as-is.
+func postToPlayground(text string) string {
+	var pg string
+	parts := strings.Split(text, "```")
+
+	for i, part := range parts {
+		part = strings.Trim(part, "\n")
+
+		if i&1 == 0 {
+			// it's a comment
+			if strings.TrimSpace(part) == "" {
+				continue
+			}
+
+			pg += "// " + strings.Replace(part, "\n", "\n// ", -1) + "\n"
+		} else {
+			// it's code
+			if part == "" {
+				continue
+			}
+
+			pg += part + "\n"
+		}
+	}
+
+	return pg
 }
 
 // NewBot will create a new Slack bot
