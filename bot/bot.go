@@ -269,8 +269,8 @@ var (
 		},
 		"slices": {
 			`The following posts will explain how slices, maps and strings work in Go:`,
-			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/go-slices-usage-and-internals>`,
+			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/strings>`,
 		},
 		"database tutorial": {
