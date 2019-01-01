@@ -104,13 +104,16 @@ func main() {
 	projectID := "gophers-slack-bot"
 
 	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace/trace.json"))
+	if err != nil {
+		log.Fatalf("failed to create trace client: %v", err)
+	}
 
 	startupSpan := traceClient.NewSpan("b.main")
 	ctx = trace.NewContext(ctx, startupSpan)
 
-	traceHttpClient := traceClient.NewHTTPClient(httpClient)
+	traceHTTPClient := traceClient.NewHTTPClient(httpClient)
 
-	slack.SetHTTPClient(traceHttpClient)
+	slack.SetHTTPClient(traceHTTPClient)
 	slackBotAPI := slack.New(slackBotToken)
 
 	botName = strings.TrimPrefix(botName, "@")
@@ -130,8 +133,8 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
-	if err := b.Init(ctx, slackBotRTM, startupSpan); err != nil {
+	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHTTPClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	if err = b.Init(ctx, slackBotRTM, startupSpan); err != nil {
 		panic(err)
 	}
 
@@ -194,7 +197,7 @@ func main() {
 		log.Fatal(s.ListenAndServe())
 	}(traceClient)
 
-	go func(){
+	go func() {
 		gotimefm := time.NewTicker(1 * time.Minute)
 		defer gotimefm.Stop()
 

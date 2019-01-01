@@ -93,11 +93,14 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 		}
 	}
 
-	publicChannels = nil
-
 	b.logf("Determining groups ID\n")
 	childSpan = initSpan.NewChild("slackApi.GetGroups")
+
 	botGroups, err := b.slackBotAPI.GetGroupsContext(ctx, true)
+	if err != nil {
+		return fmt.Errorf("failed to get groups: %v", err)
+	}
+
 	childSpan.Finish()
 	for _, group := range botGroups {
 		groupName := strings.ToLower(group.Name)
@@ -106,8 +109,6 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 			b.channels[groupName] = chn
 		}
 	}
-
-	botGroups = nil
 
 	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
 	params := slack.PostMessageParameters{AsUser: true}
@@ -565,6 +566,11 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 	}
 
 	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
+	if err != nil {
+		b.logf("failed to build GET request to %q: %v\n", info.URLPrivateDownload, err)
+		return
+	}
+
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Authorization", "Bearer "+b.token)
 	req = req.WithContext(ctx)
