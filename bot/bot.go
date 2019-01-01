@@ -298,6 +298,10 @@ var (
 			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
 			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
 		},
+		"dependency injection": {
+			`If you'd like to learn more about how to use Dependency Injection in Go, please review this post:`,
+			`- <https://appliedgo.net/di/>`,
+		},
 		"help": {
 			`Here's a list of supported commands`,
 			`- "newbie resources" -> get a list of newbie resources`,
@@ -306,6 +310,7 @@ var (
 			`- "oss help" -> help the open-source community`,
 			`- "work with forks" -> how to work with forks of packages`,
 			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
+			`- "dependency injection" -> learn how to use dependency injection in Go using interfaces`,
 			`- "block forever" -> how to block forever`,
 			`- "http timeouts" -> tutorial about dealing with timeouts and http`,
 			`- "database tutorial" -> tutorial about using sql databases`,
@@ -331,6 +336,7 @@ var (
 		"package structure":    "package layout",
 		"project structure":    "package layout",
 		"project layout":       "package layout",
+		"di":                   "dependency injection",
 	}
 
 	botPrefixToFunc = map[string]slackHandler{
