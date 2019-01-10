@@ -255,6 +255,12 @@ var (
 			`- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>`,
 			`- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>`,
 		},
+		"books": {
+			`Here are some popular books you can use to get started:`,
+			`- William Kennedy, Brian Ketelsen, Erik St. Martin Go In Action <https://www.manning.com/books/go-in-action>`,
+			`- Alan A A Donovan, Brian W Kernighan The Go Programming Language <https://www.gopl.io>`,
+			`- Mat Ryer Go Programming Blueprints 2nd Edition <https://www.packtpub.com/application-development/go-programming-blueprints-second-edition>`,
+		},
 		"oss help wanted": {
 			`Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`,
 		},
@@ -304,6 +310,7 @@ var (
 			`- "newbie resources pvt" -> get a list of newbie resources as a private message`,
 			`- "recommended channels" -> get a list of recommended channels`,
 			`- "oss help" -> help the open-source community`,
+			`- "books" -> some interesting books to help learn Go`,
 			`- "work with forks" -> how to work with forks of packages`,
 			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
 			`- "block forever" -> how to block forever`,
