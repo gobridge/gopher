@@ -298,6 +298,11 @@ var (
 			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
 			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
 		},
+		"pointer performance": {
+			`The answer to whether using a pointer offers a performance gain is complex and is not always the case. Please read these posts for more information:`,
+			`- <https://medium.com/@vCabbage/go-are-pointers-a-performance-optimization-a95840d3ef85>`,
+			`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
+		},
 		"help": {
 			`Here's a list of supported commands`,
 			`- "newbie resources" -> get a list of newbie resources`,
@@ -312,6 +317,7 @@ var (
 			`- "package layout" -> learn how to structure your Go package`,
 			`- "avoid gotchas" -> avoid common gotchas in Go`,
 			`- "library for <name>" -> search a go package that matches <name>`,
+			`- "pointer performance" -> find out more about whether pointers offer a performance gain`,
 			`- "flip a coin" -> flip a coin`,
 			`- "source code" -> location of my source code`,
 			`- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher`,
