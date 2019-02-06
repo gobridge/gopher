@@ -215,18 +215,18 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 var (
 	// Generic responses to all messages
 	containsToReactions = map[string][]string{
-		"︵": {"┬─┬ノ( º _ ºノ)"},
-		"彡": {"┬─┬ノ( º _ ºノ)"},
+		"︵":                          {"┬─┬ノ( º _ ºノ)"},
+		"彡":                          {"┬─┬ノ( º _ ºノ)"},
 		"my adorable little gophers": {"gopher"},
-		"bbq":       {"bbqgopher"},
-		"buffalo":   {"gobuffalo"},
-		"gobuffalo": {"gobuffalo"},
-		"ghost":     {"ghost"},
-		"ermergerd": {"dragon"},
-		"ermahgerd": {"dragon"},
-		"dragon":    {"dragon"},
-		"spacex":    {"rocket"},
-		"beer me":   {"beer", "beers"},
+		"bbq":                        {"bbqgopher"},
+		"buffalo":                    {"gobuffalo"},
+		"gobuffalo":                  {"gobuffalo"},
+		"ghost":                      {"ghost"},
+		"ermergerd":                  {"dragon"},
+		"ermahgerd":                  {"dragon"},
+		"dragon":                     {"dragon"},
+		"spacex":                     {"rocket"},
+		"beer me":                    {"beer", "beers"},
 	}
 
 	reactWithMessage = map[string]struct{}{
@@ -579,6 +579,10 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 	resp.Body.Close()
 	if err != nil {
 		b.logf("error while reading the file %v\n", err)
+		return
+	}
+
+	if !strings.Contains(string(file), "package main") {
 		return
 	}
 
