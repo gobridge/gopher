@@ -255,6 +255,12 @@ var (
 			`- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>`,
 			`- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>`,
 		},
+		"books": {
+			`Here are some popular books you can use to get started:`,
+			`- William Kennedy, Brian Ketelsen, Erik St. Martin Go In Action <https://www.manning.com/books/go-in-action>`,
+			`- Alan A A Donovan, Brian W Kernighan The Go Programming Language <https://www.gopl.io>`,
+			`- Mat Ryer Go Programming Blueprints 2nd Edition <https://www.packtpub.com/application-development/go-programming-blueprints-second-edition>`,
+		},
 		"oss help wanted": {
 			`Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`,
 		},
@@ -269,8 +275,8 @@ var (
 		},
 		"slices": {
 			`The following posts will explain how slices, maps and strings work in Go:`,
-			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/go-slices-usage-and-internals>`,
+			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/strings>`,
 		},
 		"database tutorial": {
@@ -298,12 +304,18 @@ var (
 			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
 			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
 		},
+		"pointer performance": {
+			`The answer to whether using a pointer offers a performance gain is complex and is not always the case. Please read these posts for more information:`,
+			`- <https://medium.com/@vCabbage/go-are-pointers-a-performance-optimization-a95840d3ef85>`,
+			`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
+		},
 		"help": {
 			`Here's a list of supported commands`,
 			`- "newbie resources" -> get a list of newbie resources`,
 			`- "newbie resources pvt" -> get a list of newbie resources as a private message`,
 			`- "recommended channels" -> get a list of recommended channels`,
 			`- "oss help" -> help the open-source community`,
+			`- "books" -> some interesting books to help learn Go`,
 			`- "work with forks" -> how to work with forks of packages`,
 			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
 			`- "block forever" -> how to block forever`,
@@ -312,9 +324,16 @@ var (
 			`- "package layout" -> learn how to structure your Go package`,
 			`- "avoid gotchas" -> avoid common gotchas in Go`,
 			`- "library for <name>" -> search a go package that matches <name>`,
+			`- "pointer performance" -> find out more about whether pointers offer a performance gain`,
 			`- "flip a coin" -> flip a coin`,
 			`- "source code" -> location of my source code`,
 			`- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher`,
+		},
+		"gopath": {
+			"Your project should be structured as follows:",
+			"```GOPATH=~/go",
+			"~/go/src/sourcecontrol/username/project/```",
+			"Whilst you _can_ get around the GOPATH, it's ill-advised. Read more about the GOPATH here: https://github.com/golang/go/wiki/GOPATH",
 		},
 	}
 
@@ -331,6 +350,9 @@ var (
 		"package structure":    "package layout",
 		"project structure":    "package layout",
 		"project layout":       "package layout",
+		"gopath problem":       "gopath",
+		"issue with gopath":    "gopath",
+		"help with gopath":     "gopath",
 	}
 
 	botPrefixToFunc = map[string]slackHandler{
@@ -821,17 +843,17 @@ func botVersion(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 }
 
 func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
-	buff := make([]byte, 1, 1)
+	buff := make([]byte, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
 		b.logf("%s\n", err)
 	}
 	result := "heads"
 	if buff[0]%2 == 0 {
-		result = "tail"
+		result = "tails"
 	}
 	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, fmt.Sprintf("%s", result), params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, result, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -861,9 +883,9 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 			"reviews":        {description: "for code reviews", welcome: true},
 			"gotimefm":       {description: "for the awesome live podcast", welcome: true},
 			"remotemeetup":   {description: "for remote meetup", welcome: true},
-			"golang-jobs":    {description: "for jobs related to Go", welcome: true},
+			"showandtell":    {description: "for telling the world about the thing you are working on", welcome: true},
+			"jobs":           {description: "for jobs related to Go", welcome: true},
 
-			"showandtell": {description: "tell the world about the thing you are working on"},
 			"performance": {description: "anything and everything performance related"},
 			"devops":      {description: "for devops related discussions"},
 			"security":    {description: "for security related discussions"},
