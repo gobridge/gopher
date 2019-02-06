@@ -1,0 +1,102 @@
+# cloud.google.com/go v0.0.0-20170526215759-7eaaec940b71
+cloud.google.com/go/datastore
+cloud.google.com/go/trace
+cloud.google.com/go/internal/fields
+cloud.google.com/go/internal/version
+cloud.google.com/go/internal/atomiccache
+cloud.google.com/go/compute/metadata
+# github.com/ChimeraCoder/anaconda v0.0.0-20170408212338-51200854e890
+github.com/ChimeraCoder/anaconda
+# github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7
+github.com/ChimeraCoder/tokenbucket
+# github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330
+github.com/azr/backoff
+# github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc
+github.com/dustin/go-jsonpointer
+# github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad
+github.com/dustin/gojson
+# github.com/garyburd/go-oauth v0.0.0-20170216215133-4f191fd0442e
+github.com/garyburd/go-oauth/oauth
+# github.com/golang/protobuf v1.2.0
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/ptypes/timestamp
+github.com/golang/protobuf/ptypes/wrappers
+github.com/golang/protobuf/ptypes/struct
+github.com/golang/protobuf/protoc-gen-go/descriptor
+github.com/golang/protobuf/ptypes/any
+# github.com/gorilla/context v1.1.1
+github.com/gorilla/context
+# github.com/gorilla/mux v0.0.0-20170427041250-4c1c3952b7d9
+github.com/gorilla/mux
+# github.com/nlopes/slack v0.0.0-20170528203044-b5c480d57859
+github.com/nlopes/slack
+# golang.org/x/net v0.0.0-20180724234803-3673e40ba225
+golang.org/x/net/context
+golang.org/x/net/websocket
+golang.org/x/net/http2
+golang.org/x/net/trace
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/http/httpguts
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/internal/timeseries
+# golang.org/x/oauth2 v0.0.0-20170517174439-f047394b6d14
+golang.org/x/oauth2
+golang.org/x/oauth2/google
+golang.org/x/oauth2/internal
+golang.org/x/oauth2/jws
+golang.org/x/oauth2/jwt
+# golang.org/x/sync v0.0.0-20170517211232-f52d1811a629
+golang.org/x/sync/semaphore
+# golang.org/x/text v0.3.0
+golang.org/x/text/secure/bidirule
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
+# golang.org/x/time v0.0.0-20170424234030-8be79e1e0910
+golang.org/x/time/rate
+# google.golang.org/api v0.0.0-20170526230557-0209b31435ad
+google.golang.org/api/option
+google.golang.org/api/iterator
+google.golang.org/api/transport
+google.golang.org/api/cloudtrace/v1
+google.golang.org/api/gensupport
+google.golang.org/api/support/bundler
+google.golang.org/api/internal
+google.golang.org/api/googleapi/transport
+google.golang.org/api/googleapi
+google.golang.org/api/googleapi/internal/uritemplates
+# google.golang.org/appengine v1.4.0
+google.golang.org/appengine/socket
+google.golang.org/appengine/urlfetch
+google.golang.org/appengine
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/socket
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/internal/app_identity
+google.golang.org/appengine/internal/modules
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/remote_api
+# google.golang.org/genproto v0.0.0-20170523043604-d80a6e20e776
+google.golang.org/genproto/googleapis/datastore/v1
+google.golang.org/genproto/googleapis/type/latlng
+google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v0.0.0-20170526152641-2739967807cc
+google.golang.org/grpc
+google.golang.org/grpc/codes
+google.golang.org/grpc/metadata
+google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/oauth
+google.golang.org/grpc/grpclb/grpc_lb_v1
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/naming
+google.golang.org/grpc/peer
+google.golang.org/grpc/stats
+google.golang.org/grpc/status
+google.golang.org/grpc/tap
+google.golang.org/grpc/transport
