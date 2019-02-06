@@ -316,6 +316,12 @@ var (
 			`- "source code" -> location of my source code`,
 			`- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher`,
 		},
+		"gopath": {
+			"Your project should be structured as follows:",
+			"```GOPATH=~/go",
+			"~/go/src/sourcecontrol/username/project/```",
+			"Whilst you _can_ get around the GOPATH, it's ill-advised. Read more about the GOPATH here: https://github.com/golang/go/wiki/GOPATH",
+		},
 	}
 
 	botEventTextToResponseAliases = map[string]string{
@@ -331,6 +337,9 @@ var (
 		"package structure":    "package layout",
 		"project structure":    "package layout",
 		"project layout":       "package layout",
+		"gopath problem":       "gopath",
+		"issue with gopath":    "gopath",
+		"help with gopath":     "gopath",
 	}
 
 	botPrefixToFunc = map[string]slackHandler{
