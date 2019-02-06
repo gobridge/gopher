@@ -215,18 +215,18 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 var (
 	// Generic responses to all messages
 	containsToReactions = map[string][]string{
-		"︵": {"┬─┬ノ( º _ ºノ)"},
-		"彡": {"┬─┬ノ( º _ ºノ)"},
+		"︵":                          {"┬─┬ノ( º _ ºノ)"},
+		"彡":                          {"┬─┬ノ( º _ ºノ)"},
 		"my adorable little gophers": {"gopher"},
-		"bbq":       {"bbqgopher"},
-		"buffalo":   {"gobuffalo"},
-		"gobuffalo": {"gobuffalo"},
-		"ghost":     {"ghost"},
-		"ermergerd": {"dragon"},
-		"ermahgerd": {"dragon"},
-		"dragon":    {"dragon"},
-		"spacex":    {"rocket"},
-		"beer me":   {"beer", "beers"},
+		"bbq":                        {"bbqgopher"},
+		"buffalo":                    {"gobuffalo"},
+		"gobuffalo":                  {"gobuffalo"},
+		"ghost":                      {"ghost"},
+		"ermergerd":                  {"dragon"},
+		"ermahgerd":                  {"dragon"},
+		"dragon":                     {"dragon"},
+		"spacex":                     {"rocket"},
+		"beer me":                    {"beer", "beers"},
 	}
 
 	reactWithMessage = map[string]struct{}{
@@ -869,9 +869,9 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 			"reviews":        {description: "for code reviews", welcome: true},
 			"gotimefm":       {description: "for the awesome live podcast", welcome: true},
 			"remotemeetup":   {description: "for remote meetup", welcome: true},
-			"golang-jobs":    {description: "for jobs related to Go", welcome: true},
+			"showandtell":    {description: "for telling the world about the thing you are working on", welcome: true},
+			"jobs":           {description: "for jobs related to Go", welcome: true},
 
-			"showandtell": {description: "tell the world about the thing you are working on"},
 			"performance": {description: "anything and everything performance related"},
 			"devops":      {description: "for devops related discussions"},
 			"security":    {description: "for security related discussions"},
