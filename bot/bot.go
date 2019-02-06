@@ -215,18 +215,18 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 var (
 	// Generic responses to all messages
 	containsToReactions = map[string][]string{
-		"︵": {"┬─┬ノ( º _ ºノ)"},
-		"彡": {"┬─┬ノ( º _ ºノ)"},
+		"︵":                          {"┬─┬ノ( º _ ºノ)"},
+		"彡":                          {"┬─┬ノ( º _ ºノ)"},
 		"my adorable little gophers": {"gopher"},
-		"bbq":       {"bbqgopher"},
-		"buffalo":   {"gobuffalo"},
-		"gobuffalo": {"gobuffalo"},
-		"ghost":     {"ghost"},
-		"ermergerd": {"dragon"},
-		"ermahgerd": {"dragon"},
-		"dragon":    {"dragon"},
-		"spacex":    {"rocket"},
-		"beer me":   {"beer", "beers"},
+		"bbq":                        {"bbqgopher"},
+		"buffalo":                    {"gobuffalo"},
+		"gobuffalo":                  {"gobuffalo"},
+		"ghost":                      {"ghost"},
+		"ermergerd":                  {"dragon"},
+		"ermahgerd":                  {"dragon"},
+		"dragon":                     {"dragon"},
+		"spacex":                     {"rocket"},
+		"beer me":                    {"beer", "beers"},
 	}
 
 	reactWithMessage = map[string]struct{}{
@@ -255,6 +255,12 @@ var (
 			`- William "Bill" Kennedy <https://twitter.com|@goinggodotnet> - <https://www.goinggo.net>`,
 			`- Brian Ketelsen <https://twitter.com/bketelsen|@bketelsen> - <https://www.brianketelsen.com/blog>`,
 		},
+		"books": {
+			`Here are some popular books you can use to get started:`,
+			`- William Kennedy, Brian Ketelsen, Erik St. Martin Go In Action <https://www.manning.com/books/go-in-action>`,
+			`- Alan A A Donovan, Brian W Kernighan The Go Programming Language <https://www.gopl.io>`,
+			`- Mat Ryer Go Programming Blueprints 2nd Edition <https://www.packtpub.com/application-development/go-programming-blueprints-second-edition>`,
+		},
 		"oss help wanted": {
 			`Here's a list of projects which could need some help from contributors like you: <https://github.com/corylanou/oss-helpwanted>`,
 		},
@@ -269,8 +275,8 @@ var (
 		},
 		"slices": {
 			`The following posts will explain how slices, maps and strings work in Go:`,
-			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/go-slices-usage-and-internals>`,
+			`- <https://blog.golang.org/slices>`,
 			`- <https://blog.golang.org/strings>`,
 		},
 		"database tutorial": {
@@ -301,6 +307,10 @@ var (
 		"dependency injection": {
 			`If you'd like to learn more about how to use Dependency Injection in Go, please review this post:`,
 			`- <https://appliedgo.net/di/>`,
+		"pointer performance": {
+			`The answer to whether using a pointer offers a performance gain is complex and is not always the case. Please read these posts for more information:`,
+			`- <https://medium.com/@vCabbage/go-are-pointers-a-performance-optimization-a95840d3ef85>`,
+			`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
 		},
 		"help": {
 			`Here's a list of supported commands`,
@@ -308,6 +318,7 @@ var (
 			`- "newbie resources pvt" -> get a list of newbie resources as a private message`,
 			`- "recommended channels" -> get a list of recommended channels`,
 			`- "oss help" -> help the open-source community`,
+			`- "books" -> some interesting books to help learn Go`,
 			`- "work with forks" -> how to work with forks of packages`,
 			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
 			`- "dependency injection" -> learn how to use dependency injection in Go using interfaces`,
@@ -317,9 +328,16 @@ var (
 			`- "package layout" -> learn how to structure your Go package`,
 			`- "avoid gotchas" -> avoid common gotchas in Go`,
 			`- "library for <name>" -> search a go package that matches <name>`,
+			`- "pointer performance" -> find out more about whether pointers offer a performance gain`,
 			`- "flip a coin" -> flip a coin`,
 			`- "source code" -> location of my source code`,
 			`- "where do you live?" OR "stack" -> get information about where the tech stack behind @gopher`,
+		},
+		"gopath": {
+			"Your project should be structured as follows:",
+			"```GOPATH=~/go",
+			"~/go/src/sourcecontrol/username/project/```",
+			"Whilst you _can_ get around the GOPATH, it's ill-advised. Read more about the GOPATH here: https://github.com/golang/go/wiki/GOPATH",
 		},
 	}
 
@@ -337,6 +355,9 @@ var (
 		"project structure":    "package layout",
 		"project layout":       "package layout",
 		"di":                   "dependency injection",
+		"gopath problem":       "gopath",
+		"issue with gopath":    "gopath",
+		"help with gopath":     "gopath",
 	}
 
 	botPrefixToFunc = map[string]slackHandler{
@@ -708,7 +729,7 @@ func respond(ctx context.Context, b *Bot, event *slack.MessageEvent, response st
 		b.logf("should reply to message %s with %s\n", event.Text, response)
 		return
 	}
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, response, params)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -737,7 +758,7 @@ func searchLibrary(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 		return
 	}
 	searchTerm = url.QueryEscape(searchTerm)
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -775,9 +796,10 @@ func xkcd(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", comicID)
 
 	params := slack.PostMessageParameters{
-		AsUser:      true,
-		UnfurlLinks: true,
-		UnfurlMedia: true,
+		AsUser:          true,
+		ThreadTimestamp: event.ThreadTimestamp,
+		UnfurlLinks:     true,
+		UnfurlMedia:     true,
 	}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, imageLink, params)
 	if err != nil {
@@ -792,7 +814,7 @@ func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix strin
 		link = link[:strings.Index(link, " ")]
 	}
 
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -826,17 +848,17 @@ func botVersion(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 }
 
 func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
-	buff := make([]byte, 1, 1)
+	buff := make([]byte, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
 		b.logf("%s\n", err)
 	}
 	result := "heads"
 	if buff[0]%2 == 0 {
-		result = "tail"
+		result = "tails"
 	}
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, fmt.Sprintf("%s", result), params)
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, result, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
@@ -866,9 +888,9 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 			"reviews":        {description: "for code reviews", welcome: true},
 			"gotimefm":       {description: "for the awesome live podcast", welcome: true},
 			"remotemeetup":   {description: "for remote meetup", welcome: true},
-			"golang-jobs":    {description: "for jobs related to Go", welcome: true},
+			"showandtell":    {description: "for telling the world about the thing you are working on", welcome: true},
+			"jobs":           {description: "for jobs related to Go", welcome: true},
 
-			"showandtell": {description: "tell the world about the thing you are working on"},
 			"performance": {description: "anything and everything performance related"},
 			"devops":      {description: "for devops related discussions"},
 			"security":    {description: "for security related discussions"},
