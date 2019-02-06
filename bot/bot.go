@@ -829,17 +829,17 @@ func botVersion(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 }
 
 func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
-	buff := make([]byte, 1, 1)
+	buff := make([]byte, 1)
 	_, err := rand.Read(buff)
 	if err != nil {
 		b.logf("%s\n", err)
 	}
 	result := "heads"
 	if buff[0]%2 == 0 {
-		result = "tail"
+		result = "tails"
 	}
 	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, fmt.Sprintf("%s", result), params)
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, result, params)
 	if err != nil {
 		b.logf("%s\n", err)
 		return
