@@ -724,7 +724,7 @@ func respond(ctx context.Context, b *Bot, event *slack.MessageEvent, response st
 		b.logf("should reply to message %s with %s\n", event.Text, response)
 		return
 	}
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, response, params)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -753,7 +753,7 @@ func searchLibrary(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 		return
 	}
 	searchTerm = url.QueryEscape(searchTerm)
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -791,9 +791,10 @@ func xkcd(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", comicID)
 
 	params := slack.PostMessageParameters{
-		AsUser:      true,
-		UnfurlLinks: true,
-		UnfurlMedia: true,
+		AsUser:          true,
+		ThreadTimestamp: event.ThreadTimestamp,
+		UnfurlLinks:     true,
+		UnfurlMedia:     true,
 	}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, imageLink, params)
 	if err != nil {
@@ -808,7 +809,7 @@ func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix strin
 		link = link[:strings.Index(link, " ")]
 	}
 
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -851,7 +852,7 @@ func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	if buff[0]%2 == 0 {
 		result = "tails"
 	}
-	params := slack.PostMessageParameters{AsUser: true}
+	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, result, params)
 	if err != nil {
 		b.logf("%s\n", err)
