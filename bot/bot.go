@@ -304,6 +304,9 @@ var (
 			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
 			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
 		},
+		"dependency injection": {
+			`If you'd like to learn more about how to use Dependency Injection in Go, please review this post:`,
+			`- <https://appliedgo.net/di/>`,
 		"pointer performance": {
 			`The answer to whether using a pointer offers a performance gain is complex and is not always the case. Please read these posts for more information:`,
 			`- <https://medium.com/@vCabbage/go-are-pointers-a-performance-optimization-a95840d3ef85>`,
@@ -318,6 +321,7 @@ var (
 			`- "books" -> some interesting books to help learn Go`,
 			`- "work with forks" -> how to work with forks of packages`,
 			`- "idiomatic go" -> learn how to write more idiomatic Go code`,
+			`- "dependency injection" -> learn how to use dependency injection in Go using interfaces`,
 			`- "block forever" -> how to block forever`,
 			`- "http timeouts" -> tutorial about dealing with timeouts and http`,
 			`- "database tutorial" -> tutorial about using sql databases`,
@@ -350,6 +354,7 @@ var (
 		"package structure":    "package layout",
 		"project structure":    "package layout",
 		"project layout":       "package layout",
+		"di":                   "dependency injection",
 		"gopath problem":       "gopath",
 		"issue with gopath":    "gopath",
 		"help with gopath":     "gopath",
