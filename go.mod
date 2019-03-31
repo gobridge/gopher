@@ -1,4 +1,4 @@
-module github.com/gopheracademy/gopher
+module github.com/gobridge/gopher
 
 require (
 	cloud.google.com/go v0.0.0-20170526215759-7eaaec940b71
