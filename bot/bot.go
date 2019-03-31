@@ -391,7 +391,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		b.logf("got message: %s\n", eventText)
 		b.logf("isBotMessage: %t\n", b.isBotMessage(event, eventText))
 		b.logf("channel: %s -> message: %q\n", event.Channel, b.trimBot(eventText))
-		return
 	}
 
 	span := b.traceClient.NewSpan("b.HandleMessage")
