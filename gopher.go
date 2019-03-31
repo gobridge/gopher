@@ -194,7 +194,7 @@ func main() {
 		log.Fatal(s.ListenAndServe())
 	}(traceClient)
 
-	go func(){
+	go func() {
 		gotimefm := time.NewTicker(1 * time.Minute)
 		defer gotimefm.Stop()
 
