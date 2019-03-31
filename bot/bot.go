@@ -122,7 +122,7 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 
 	botGroups = nil
 
-	b.logf("Initialized %s with ID: %q\n", b.name, b.id)
+	b.logf("Initialized %s with ID (%q) and msgprefix (%q) \n", b.name, b.id, b.msgprefix)
 	params := slack.PostMessageParameters{AsUser: true}
 	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
 	_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
@@ -460,6 +460,9 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// All messages past this point are directed to @gopher itself
 	if !b.isBotMessage(event, eventText) {
+		if b.devMode {
+			b.logf("!BotMessage: %q\n", eventText)
+		}
 		return
 	}
 
