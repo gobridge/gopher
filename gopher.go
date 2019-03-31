@@ -47,7 +47,7 @@ import (
 
 const (
 	gerritLink            = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
-	defaultCredentialFile = "/tmp/trace/trace.json"
+	defaultCredentialFile = "/tmp/trace/trace.json" // Also /tmp/datastore/datastore.json :-(
 )
 
 var (
@@ -115,6 +115,8 @@ func main() {
 	}
 
 	if googleCredentials == "" {
+		// FIXME: This doesn't deal with the default credentials in per service locations.
+
 		if _, err := os.Stat(defaultCredentialFile); err == nil {
 			googleCredentials = defaultCredentialFile
 		}
@@ -160,7 +162,7 @@ func main() {
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
-	dsClient, err := datastore.NewClient(ctx, googleProjectID, option.WithServiceAccountFile("/tmp/datastore/datastore.json"))
+	dsClient, err := datastore.NewClient(ctx, googleProjectID, option.WithServiceAccountFile(googleCredentials))
 	if err != nil {
 		log.Fatalln("Unable to create datastore client:", err)
 	}
