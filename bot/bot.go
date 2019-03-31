@@ -63,6 +63,14 @@ type (
 
 var welcomeMessage = ""
 
+func (b *Bot) getID(ctx context.Context) (string, error) {
+	ai, err := b.slackBotAPI.AuthTestContext(ctx)
+	if err != nil {
+		return "U1XK0CWSZ", err // This is the old hard coded id
+	}
+	return ai.UserID, nil
+}
+
 // Init must be called before anything else in order to initialize the bot
 func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error {
 	initSpan := span.NewChild("b.Init")
@@ -70,7 +78,12 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 
 	b.logf("Determining bot / user IDs")
 
-	b.id = "U1XK0CWSZ"
+	var err error
+	b.id, err = b.getID(ctx)
+	if err != nil {
+		b.logf("Error getting bot user id: %s\n",err)
+	}
+
 	b.users = map[string]string{
 		"dlsniper": "U03L9MPTE",
 	}
