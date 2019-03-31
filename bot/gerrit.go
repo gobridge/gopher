@@ -188,7 +188,7 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 
 		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pvtChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
 		if err != nil {
-			b.logf("%s\n", err)
+			b.logf("Error Posting Message to %s: %s\n", pvtChannel, err)
 			continue
 		}
 
