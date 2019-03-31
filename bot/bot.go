@@ -122,7 +122,7 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 
 	botGroups = nil
 
-	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
+	b.logf("Initialized %s with ID: %q\n", b.name, b.id)
 	params := slack.PostMessageParameters{AsUser: true}
 	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
 	_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
@@ -177,9 +177,11 @@ func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 	span := b.traceClient.NewSpan("b.TeamJoined")
 	defer span.Finish()
 
+	/*
 	if b.devMode {
 		return
 	}
+	*/
 
 	message := `Hello ` + event.User.Name + welcomeMessage
 
@@ -593,7 +595,7 @@ func recommendedChannels(ctx context.Context, b *Bot, event *slack.MessageEvent)
 }
 
 func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) {
-	if event.File == nil || b.devMode {
+	if event.File == nil /*|| b.devMode */ {
 		return
 	}
 
@@ -670,9 +672,9 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 }
 
 func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent) {
-	if b.devMode {
+	/* if b.devMode {
 		return
-	}
+	}*/
 
 	originalEventText := event.Text
 	eventText := ""
@@ -743,7 +745,6 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 func respond(ctx context.Context, b *Bot, event *slack.MessageEvent, response string) {
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, response)
-		return
 	}
 	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, response, params)
@@ -880,7 +881,6 @@ func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix strin
 func (b *Bot) reactToEvent(ctx context.Context, event *slack.MessageEvent, reaction string) {
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, reaction)
-		return
 	}
 	item := slack.ItemRef{
 		Channel:   event.Channel,
