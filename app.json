@@ -1,0 +1,47 @@
+{
+  "env": {
+    "GOPHERS_SLACK_BOT_TOKEN": {
+      "description": "The Slack bot token"
+    },
+    "GOPHERS_SLACK_BOT_NAME": {
+      "description": "the Slack bot name (in development `tempbot` is used)"
+    },
+    "GOPHERS_SLACK_BOT_DEV_MODE": {
+      "description": "boolean, set the bot in development mode",
+      "value": true
+    },
+    "GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY": {
+      "description": "DOCUMENT ME"
+    },
+    "GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET": {
+      "description": "DOCUMENT ME"
+    },
+    "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN": {
+      "description": "DOCUMENT ME"
+    },
+    "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET": {
+      "description": "DOCUMENT ME"
+    },
+    "GOOGLE_CREDENTIALS": {
+      "description": "Base64 encoded JSON Google credentials file"
+    },
+    "GOOGLE_PROJECT_ID": {
+      "description": "The ID of the google project"
+    }
+  },
+  "environments": {
+    "test": {
+      "env": {
+        "GOPHERS_SLACK_BOT_TOKEN": "CHANGE_ME",
+        "GOPHERS_SLACK_BOT_NAME": "CHANGE_ME",
+        "GOPHERS_SLACK_BOT_DEV_MODE": true,
+        "GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY": "CHANGE_ME",
+        "GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET": "CHANGE_ME",
+        "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN": "CHANGE_ME",
+        "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET": "CHANGE_ME",
+        "GOOGLE_CREDENTIALS": "CHANGE_ME",
+        "GOOGLE_PROJECT_ID": "CHANGE_ME"
+      }
+    }
+  }
+}
