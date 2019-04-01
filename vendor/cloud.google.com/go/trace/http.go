@@ -1,4 +1,4 @@
-// Copyright 2017 Google Inc. All Rights Reserved.
+// Copyright 2017 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build go1.7
-
 package trace
 
-import "net/http"
+import (
+	"net/http"
+)
 
-type tracerTransport struct {
-	base http.RoundTripper
+// Transport is an http.RoundTripper that traces the outgoing requests.
+//
+// Transport is safe for concurrent usage.
+//
+// Deprecated: see https://cloud.google.com/trace/docs/setup/go.
+type Transport struct {
+	// Base is the base http.RoundTripper to be used to do the actual request.
+	//
+	// Optional. If nil, http.DefaultTransport is used.
+	Base http.RoundTripper
 }
 
-func (tt *tracerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+// RoundTrip creates a trace.Span and inserts it into the outgoing request's headers.
+// The created span can follow a parent span, if a parent is presented in
+// the request's context.
+//
+// Deprecated: see https://cloud.google.com/trace/docs/setup/go.
+func (t Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	span := FromContext(req.Context()).NewRemoteChild(req)
-	resp, err := tt.base.RoundTrip(req)
+	resp, err := t.base().RoundTrip(req)
 
 	// TODO(jbd): Is it possible to defer the span.Finish?
 	// In cases where RoundTrip panics, we still can finish the span.
@@ -32,43 +45,23 @@ func (tt *tracerTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return resp, err
 }
 
-// HTTPClient is an HTTP client that enhances http.Client
-// with automatic tracing support.
-type HTTPClient struct {
-	http.Client
-	traceClient *Client
-}
-
-// Do behaves like (*http.Client).Do but automatically traces
-// outgoing requests if tracing is enabled for the current request.
+// CancelRequest cancels an in-flight request by closing its connection.
 //
-// If req.Context() contains a traced *Span, the outgoing request
-// is traced with the existing span. If not, the request is not traced.
-func (c *HTTPClient) Do(req *http.Request) (*http.Response, error) {
-	return c.Client.Do(req)
+// Deprecated: see https://cloud.google.com/trace/docs/setup/go.
+func (t Transport) CancelRequest(req *http.Request) {
+	type canceler interface {
+		CancelRequest(*http.Request)
+	}
+	if cr, ok := t.base().(canceler); ok {
+		cr.CancelRequest(req)
+	}
 }
 
-// NewHTTPClient creates a new HTTPClient that will trace the outgoing
-// requests using tc. The attributes of this client are inherited from the
-// given http.Client. If orig is nil, http.DefaultClient is used.
-func (c *Client) NewHTTPClient(orig *http.Client) *HTTPClient {
-	if orig == nil {
-		orig = http.DefaultClient
+func (t Transport) base() http.RoundTripper {
+	if t.Base != nil {
+		return t.Base
 	}
-	rt := orig.Transport
-	if rt == nil {
-		rt = http.DefaultTransport
-	}
-	client := http.Client{
-		Transport:     &tracerTransport{base: rt},
-		CheckRedirect: orig.CheckRedirect,
-		Jar:           orig.Jar,
-		Timeout:       orig.Timeout,
-	}
-	return &HTTPClient{
-		Client:      client,
-		traceClient: c,
-	}
+	return http.DefaultTransport
 }
 
 // HTTPHandler returns a http.Handler from the given handler
@@ -79,7 +72,12 @@ func (c *Client) NewHTTPClient(orig *http.Client) *HTTPClient {
 //    span := trace.FromContext(r.Context())
 //
 // The span will be auto finished by the handler.
+//
+// Deprecated: see https://cloud.google.com/trace/docs/setup/go.
 func (c *Client) HTTPHandler(h http.Handler) http.Handler {
+	if c == nil {
+		return h
+	}
 	return &handler{traceClient: c, handler: h}
 }
 
@@ -88,10 +86,29 @@ type handler struct {
 	handler     http.Handler
 }
 
+// Deprecated: see https://cloud.google.com/trace/docs/setup/go.
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	span := h.traceClient.SpanFromRequest(r)
+	traceID, parentSpanID, options, optionsOk, ok := traceInfoFromHeader(r.Header.Get(httpHeader))
+	if !ok {
+		traceID = nextTraceID()
+	}
+	t := &trace{
+		traceID:       traceID,
+		client:        h.traceClient,
+		globalOptions: options,
+		localOptions:  options,
+	}
+	span := startNewChildWithRequest(r, t, parentSpanID)
+	span.span.Kind = spanKindServer
+	span.rootSpan = true
+	configureSpanFromPolicy(span, h.traceClient.policy, ok)
 	defer span.Finish()
 
 	r = r.WithContext(NewContext(r.Context(), span))
+	if ok && !optionsOk {
+		// Inject the trace context back to the response with the sampling options.
+		// TODO(jbd): Remove when there is a better way to report the client's sampling.
+		w.Header().Set(httpHeader, spanHeader(traceID, parentSpanID, span.trace.localOptions))
+	}
 	h.handler.ServeHTTP(w, r)
 }
