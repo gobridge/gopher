@@ -84,10 +84,6 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 		b.logf("Error getting bot user id: %s\n",err)
 	}
 
-	b.users = map[string]string{
-		"dlsniper": "U03L9MPTE",
-	}
-
 	b.msgprefix = strings.ToLower("<@" + b.id + ">")
 
 	b.logf("Determining channels ID\n")
@@ -106,12 +102,14 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 		}
 	}
 
-	publicChannels = nil
-
 	b.logf("Determining groups ID\n")
 	childSpan = initSpan.NewChild("slackApi.GetGroups")
 	botGroups, err := b.slackBotAPI.GetGroupsContext(ctx, true)
 	childSpan.Finish()
+	if err != nil {
+		return err
+	}
+
 	for _, group := range botGroups {
 		groupName := strings.ToLower(group.Name)
 		if chn, ok := b.channels[groupName]; ok && b.channels[groupName].slackID == "" {
@@ -120,12 +118,11 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 		}
 	}
 
-	botGroups = nil
-
 	b.logf("Initialized %s with ID (%q) and msgprefix (%q) \n", b.name, b.id, b.msgprefix)
 	params := slack.PostMessageParameters{AsUser: true}
 	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
+	//TODO: This is the hard coded channel id of #gobridge-ops
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, "G207C8R1R", fmt.Sprintf(`Deployed version: %s`, b.version), params)
 	childSpan.Finish()
 
 	if err != nil {
@@ -460,9 +457,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// All messages past this point are directed to @gopher itself
 	if !b.isBotMessage(event, eventText) {
-		if b.devMode {
-			b.logf("!BotMessage: %q\n", eventText)
-		}
 		return
 	}
 
@@ -940,6 +934,8 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
+
+		users: 	 map[string]string{},
 
 		channels: map[string]slackChan{
 			"golang-newbies": {description: "for newbie resources", welcome: true},
