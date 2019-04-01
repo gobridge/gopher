@@ -611,6 +611,10 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 	}
 
 	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
+	if err != nil {
+		b.logf("error creating playground request: ", err)
+		return
+	}
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req.Header.Add("Authorization", "Bearer "+b.token)
 	req = req.WithContext(ctx)
