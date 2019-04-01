@@ -1,1 +1,1 @@
-gopher: gopher
+web: gopher

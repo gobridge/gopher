@@ -30,7 +30,7 @@
     },
     "GO_LINKER_SYMBOL": {
       "description": "The symbol to set to the git sha/version tag. Do not change.",
-      "value": "botVersion"
+      "value": "main.BotVersion"
     },
     "OPS_CHANNEL": {
       "description": "The ops channel to post informative info to"

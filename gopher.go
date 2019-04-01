@@ -51,8 +51,8 @@ const (
 )
 
 var (
-	botVersion = "HEAD"
-	info       = `{ "version": "` + botVersion + `" }`
+	BotVersion = "HEAD"
+	info       = `{ "version": "` + BotVersion + `" }`
 )
 
 func decodeGoogleCredentialsToFile(ec string) string {
@@ -169,7 +169,7 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
+	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, BotVersion, devMode, log.Printf)
 	if err := b.Init(ctx, slackBotRTM, startupSpan, opsChannel); err != nil {
 		log.Fatalln("Unable to init bot:", err)
 	}
