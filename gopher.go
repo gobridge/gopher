@@ -51,8 +51,8 @@ const (
 )
 
 var (
-	botVersion = "HEAD"
-	info       = `{ "version": "` + botVersion + `" }`
+	BotVersion = "HEAD"
+	info       = `{ "version": "` + BotVersion + `" }`
 )
 
 func decodeGoogleCredentialsToFile(ec string) string {
@@ -85,6 +85,7 @@ func main() {
 	twitterAccessTokenSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
 	googleCredentials := os.Getenv("GOOGLE_CREDENTIALS")
 	googleProjectID := os.Getenv("GOOGLE_PROJECT_ID")
+	opsChannel := os.Getenv("OPS_CHANNEL")
 	devMode := os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE") == "true"
 
 	if slackBotToken == "" {
@@ -168,8 +169,8 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
-	if err := b.Init(ctx, slackBotRTM, startupSpan); err != nil {
+	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, BotVersion, devMode, log.Printf)
+	if err := b.Init(ctx, slackBotRTM, startupSpan, opsChannel); err != nil {
 		log.Fatalln("Unable to init bot:", err)
 	}
 
@@ -221,8 +222,13 @@ func main() {
 			Name("info").
 			Methods("GET")
 
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8081"
+		}
+
 		s := http.Server{
-			Addr:         ":8081",
+			Addr:         ":" + port,
 			Handler:      r,
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
