@@ -98,20 +98,25 @@ func main() {
 		botName = "tempbot"
 	}
 
+	twitter := true
 	if twitterConsumerKey == "" {
-		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY")
+		log.Println("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY; Twitter support disabled.")
+		twitter = false
 	}
 
 	if twitterConsumerSecret == "" {
-		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET")
+		log.Println("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET; Twitter support disabled.")
+		twitter = false
 	}
 
 	if twitterAccessToken == "" {
-		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN")
+		log.Println("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN; Twitter support disabled.")
+		twitter = false
 	}
 
 	if twitterAccessTokenSecret == "" {
-		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
+		log.Println("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET; Twitter support disabled.")
+		twitter = false
 	}
 
 	if googleCredentials == "" {
@@ -153,9 +158,12 @@ func main() {
 
 	botName = strings.TrimPrefix(botName, "@")
 
-	anaconda.SetConsumerKey(twitterConsumerKey)
-	anaconda.SetConsumerSecret(twitterConsumerSecret)
-	twitterAPI := anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
+	var twitterAPI *anaconda.TwitterApi
+	if twitter {
+		anaconda.SetConsumerKey(twitterConsumerKey)
+		anaconda.SetConsumerSecret(twitterConsumerSecret)
+		twitterAPI = anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
+	}
 
 	rtmOptions := &slack.RTMOptions{}
 	slackBotRTM := slackBotAPI.NewRTMWithOptions(rtmOptions)
