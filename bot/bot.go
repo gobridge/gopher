@@ -119,6 +119,8 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 	}
 
 	b.logf("Initialized %s with ID (%q) and msgprefix (%q) \n", b.name, b.id, b.msgprefix)
+  //TODO: Get this working again to a channel
+	/*
 	params := slack.PostMessageParameters{AsUser: true}
 	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
 	//TODO: This is the hard coded channel id of #gobridge-ops
@@ -128,7 +130,8 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 	if err != nil {
 		b.logf(`failed to deploy version: %s`, b.version)
 	}
-
+	*/
+	
 	welcomeMessage = `,
 
 
