@@ -23,7 +23,9 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -32,7 +34,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gopheracademy/gopher/bot"
+	"github.com/gobridge/gopher/bot"
 
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/trace"
@@ -43,12 +45,34 @@ import (
 	"google.golang.org/api/option"
 )
 
-const gerritLink = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
+const (
+	gerritLink            = "https://go-review.googlesource.com/changes/?q=status:merged&O=12&n=100"
+	defaultCredentialFile = "/tmp/trace/trace.json" // Also /tmp/datastore/datastore.json :-(
+)
 
 var (
 	botVersion = "HEAD"
 	info       = `{ "version": "` + botVersion + `" }`
 )
+
+func decodeGoogleCredentialsToFile(ec string) string {
+	r := base64.NewDecoder(base64.StdEncoding, strings.NewReader(ec))
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		log.Fatalln("Unable to decode google credentials:", err)
+	}
+	fi, err := ioutil.TempFile("", "google_*")
+	if err != nil {
+		log.Fatalln("Unable to create temporary credential file:", err)
+	}
+	if n, err := fi.Write(b); err != nil || n != len(b) {
+		log.Fatalln("Unable to completely write credential file:", err)
+	}
+	if err := fi.Close(); err != nil {
+		log.Fatalln("Unable to close temporary credential file: ", err)
+	}
+	return fi.Name()
+}
 
 func main() {
 	log.SetFlags(log.Lshortfile)
@@ -59,6 +83,8 @@ func main() {
 	twitterConsumerSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET")
 	twitterAccessToken := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN")
 	twitterAccessTokenSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
+	googleCredentials := os.Getenv("GOOGLE_CREDENTIALS")
+	googleProjectID := os.Getenv("GOOGLE_PROJECT_ID")
 	devMode := os.Getenv("GOPHERS_SLACK_BOT_DEV_MODE") == "true"
 
 	if slackBotToken == "" {
@@ -88,6 +114,16 @@ func main() {
 		log.Fatalln("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
 	}
 
+	if googleCredentials == "" {
+		// FIXME: This doesn't deal with the default credentials in per service locations.
+
+		if _, err := os.Stat(defaultCredentialFile); err == nil {
+			googleCredentials = defaultCredentialFile
+		}
+	} else {
+		googleCredentials = decodeGoogleCredentialsToFile(googleCredentials)
+	}
+
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
@@ -101,9 +137,11 @@ func main() {
 	}
 
 	ctx := context.Background()
-	projectID := "gophers-slack-bot"
 
-	traceClient, err := trace.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/trace/trace.json"))
+	traceClient, err := trace.NewClient(ctx, googleProjectID, option.WithServiceAccountFile(googleCredentials))
+	if err != nil {
+		log.Fatalln("Unable to create trace client:", err)
+	}
 
 	startupSpan := traceClient.NewSpan("b.main")
 	ctx = trace.NewContext(ctx, startupSpan)
@@ -124,21 +162,20 @@ func main() {
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
-	dsClient, err := datastore.NewClient(ctx, projectID, option.WithServiceAccountFile("/tmp/datastore/datastore.json"))
+	dsClient, err := datastore.NewClient(ctx, googleProjectID, option.WithServiceAccountFile(googleCredentials))
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		log.Fatalln("Unable to create datastore client:", err)
 	}
 	defer dsClient.Close()
 
 	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, botVersion, devMode, log.Printf)
 	if err := b.Init(ctx, slackBotRTM, startupSpan); err != nil {
-		panic(err)
+		log.Fatalln("Unable to init bot:", err)
 	}
 
 	_, err = b.GetLastSeenCL(ctx)
 	if err != nil {
-		log.Printf("got error: %v\n", err)
-		panic(err)
+		panic("Unable to GetLastSeenCL: " + err.Error())
 	}
 
 	go func() {
@@ -194,7 +231,7 @@ func main() {
 		log.Fatal(s.ListenAndServe())
 	}(traceClient)
 
-	go func(){
+	go func() {
 		gotimefm := time.NewTicker(1 * time.Minute)
 		defer gotimefm.Stop()
 

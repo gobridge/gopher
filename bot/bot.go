@@ -63,6 +63,14 @@ type (
 
 var welcomeMessage = ""
 
+func (b *Bot) getID(ctx context.Context) (string, error) {
+	ai, err := b.slackBotAPI.AuthTestContext(ctx)
+	if err != nil {
+		return "U1XK0CWSZ", err // This is the old hard coded id
+	}
+	return ai.UserID, nil
+}
+
 // Init must be called before anything else in order to initialize the bot
 func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error {
 	initSpan := span.NewChild("b.Init")
@@ -70,9 +78,10 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 
 	b.logf("Determining bot / user IDs")
 
-	b.id = "U1XK0CWSZ"
-	b.users = map[string]string{
-		"dlsniper": "U03L9MPTE",
+	var err error
+	b.id, err = b.getID(ctx)
+	if err != nil {
+		b.logf("Error getting bot user id: %s\n",err)
 	}
 
 	b.msgprefix = strings.ToLower("<@" + b.id + ">")
@@ -93,12 +102,14 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 		}
 	}
 
-	publicChannels = nil
-
 	b.logf("Determining groups ID\n")
 	childSpan = initSpan.NewChild("slackApi.GetGroups")
 	botGroups, err := b.slackBotAPI.GetGroupsContext(ctx, true)
 	childSpan.Finish()
+	if err != nil {
+		return err
+	}
+
 	for _, group := range botGroups {
 		groupName := strings.ToLower(group.Name)
 		if chn, ok := b.channels[groupName]; ok && b.channels[groupName].slackID == "" {
@@ -107,12 +118,11 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 		}
 	}
 
-	botGroups = nil
-
-	b.logf("Initialized %s with ID: %s\n", b.name, b.id)
+	b.logf("Initialized %s with ID (%q) and msgprefix (%q) \n", b.name, b.id, b.msgprefix)
 	params := slack.PostMessageParameters{AsUser: true}
 	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.users["dlsniper"], fmt.Sprintf(`Deployed version: %s`, b.version), params)
+	//TODO: This is the hard coded channel id of #gobridge-ops
+	_, _, err = b.slackBotAPI.PostMessageContext(ctx, "G207C8R1R", fmt.Sprintf(`Deployed version: %s`, b.version), params)
 	childSpan.Finish()
 
 	if err != nil {
@@ -164,9 +174,11 @@ func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 	span := b.traceClient.NewSpan("b.TeamJoined")
 	defer span.Finish()
 
+	/*
 	if b.devMode {
 		return
 	}
+	*/
 
 	message := `Hello ` + event.User.Name + welcomeMessage
 
@@ -307,6 +319,7 @@ var (
 		"dependency injection": {
 			`If you'd like to learn more about how to use Dependency Injection in Go, please review this post:`,
 			`- <https://appliedgo.net/di/>`,
+		},
 		"pointer performance": {
 			`The answer to whether using a pointer offers a performance gain is complex and is not always the case. Please read these posts for more information:`,
 			`- <https://medium.com/@vCabbage/go-are-pointers-a-performance-optimization-a95840d3ef85>`,
@@ -390,7 +403,6 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 		b.logf("got message: %s\n", eventText)
 		b.logf("isBotMessage: %t\n", b.isBotMessage(event, eventText))
 		b.logf("channel: %s -> message: %q\n", event.Channel, b.trimBot(eventText))
-		return
 	}
 
 	span := b.traceClient.NewSpan("b.HandleMessage")
@@ -580,7 +592,7 @@ func recommendedChannels(ctx context.Context, b *Bot, event *slack.MessageEvent)
 }
 
 func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) {
-	if event.File == nil || b.devMode {
+	if event.File == nil /*|| b.devMode */ {
 		return
 	}
 
@@ -657,9 +669,9 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 }
 
 func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent) {
-	if b.devMode {
+	/* if b.devMode {
 		return
-	}
+	}*/
 
 	originalEventText := event.Text
 	eventText := ""
@@ -730,7 +742,6 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 func respond(ctx context.Context, b *Bot, event *slack.MessageEvent, response string) {
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, response)
-		return
 	}
 	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
 	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, response, params)
@@ -867,7 +878,6 @@ func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix strin
 func (b *Bot) reactToEvent(ctx context.Context, event *slack.MessageEvent, reaction string) {
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, reaction)
-		return
 	}
 	item := slack.ItemRef{
 		Channel:   event.Channel,
@@ -924,6 +934,8 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
+
+		users: 	 map[string]string{},
 
 		channels: map[string]slackChan{
 			"golang-newbies": {description: "for newbie resources", welcome: true},
