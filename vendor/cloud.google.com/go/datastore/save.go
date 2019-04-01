@@ -1,4 +1,4 @@
-// Copyright 2014 Google LLC
+// Copyright 4 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 	"time"
-	"unicode/utf8"
 
 	timepb "github.com/golang/protobuf/ptypes/timestamp"
 	pb "google.golang.org/genproto/googleapis/datastore/v1"
@@ -88,23 +87,9 @@ func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect
 				return saveSliceProperty(props, name, opts, v)
 			}
 		case reflect.Ptr:
-			if isValidPointerType(v.Type().Elem()) {
-				if v.IsNil() {
-					// Nil pointer becomes a nil property value (unless omitempty, handled above).
-					p.Value = nil
-					*props = append(*props, p)
-					return nil
-				}
-				// When we recurse on the derefenced pointer, omitempty no longer applies:
-				// we already know the pointer is not empty, it doesn't matter if its referent
-				// is empty or not.
-				opts.omitEmpty = false
-				return saveStructProperty(props, name, opts, v.Elem())
-			}
 			if v.Type().Elem().Kind() != reflect.Struct {
 				return fmt.Errorf("datastore: unsupported struct field type: %s", v.Type())
 			}
-			// Pointer to struct is a special case.
 			if v.IsNil() {
 				return nil
 			}
@@ -310,7 +295,7 @@ func propertiesToProto(key *Key, props []Property) (*pb.Entity, error) {
 	}
 	indexedProps := 0
 	for _, p := range props {
-		// Do not send a Key value a field to datastore.
+		// Do not send a Key value a a field to datastore.
 		if p.Name == keyFieldName {
 			continue
 		}
@@ -353,9 +338,6 @@ func interfaceToProto(iv interface{}, noIndex bool) (*pb.Value, error) {
 	case string:
 		if len(v) > 1500 && !noIndex {
 			return nil, errors.New("string property too long to index")
-		}
-		if !utf8.ValidString(v) {
-			return nil, fmt.Errorf("string is not valid utf8: %q", v)
 		}
 		val.ValueType = &pb.Value_StringValue{StringValue: v}
 	case float32:
@@ -409,18 +391,10 @@ func interfaceToProto(iv interface{}, noIndex bool) (*pb.Value, error) {
 		// than the top-level value.
 		val.ExcludeFromIndexes = false
 	default:
-		rv := reflect.ValueOf(iv)
-		if !rv.IsValid() {
-			val.ValueType = &pb.Value_NullValue{}
-		} else if rv.Kind() == reflect.Ptr { // non-nil pointer: dereference
-			if rv.IsNil() {
-				val.ValueType = &pb.Value_NullValue{}
-				return val, nil
-			}
-			return interfaceToProto(rv.Elem().Interface(), noIndex)
-		} else {
-			return nil, fmt.Errorf("invalid Value type %T", iv)
+		if iv != nil {
+			return nil, fmt.Errorf("invalid Value type %t", iv)
 		}
+		val.ValueType = &pb.Value_NullValue{}
 	}
 	// TODO(jbd): Support EntityValue.
 	return val, nil
@@ -442,29 +416,6 @@ func isEmptyValue(v reflect.Value) bool {
 		return v.Float() == 0
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
-	case reflect.Struct:
-		if t, ok := v.Interface().(time.Time); ok {
-			return t.IsZero()
-		}
-	}
-	return false
-}
-
-// isValidPointerType reports whether a struct field can be a pointer to type t
-// for the purposes of saving and loading.
-func isValidPointerType(t reflect.Type) bool {
-	if t == typeOfTime || t == typeOfGeoPoint {
-		return true
-	}
-	switch t.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return true
-	case reflect.Bool:
-		return true
-	case reflect.String:
-		return true
-	case reflect.Float32, reflect.Float64:
-		return true
 	}
 	return false
 }

@@ -1,4 +1,4 @@
-// Copyright 2014 Google LLC
+// Copyright 2014 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@ import (
 // Entities with more than this many indexed properties will not be saved.
 const maxIndexedProperties = 20000
 
+// []byte fields more than 1 megabyte long will not be loaded or saved.
+const maxBlobLen = 1 << 20
+
 // Property is a name/value pair plus some metadata. A datastore entity's
 // contents are loaded and saved as a sequence of Properties. Each property
 // name must be unique within an entity.
@@ -38,7 +41,7 @@ type Property struct {
 	//	- string
 	//	- float64
 	//	- *Key
-	//	- time.Time (retrieved as local time)
+	//	- time.Time
 	//	- GeoPoint
 	//	- []byte (up to 1 megabyte in length)
 	//	- *Entity (representing a nested struct)
@@ -328,7 +331,7 @@ func plsForSave(v reflect.Value) (PropertyLoadSaver, error) {
 func pls(v reflect.Value) (PropertyLoadSaver, error) {
 	if v.Kind() != reflect.Ptr {
 		if _, ok := v.Interface().(PropertyLoadSaver); ok {
-			return nil, fmt.Errorf("datastore: PropertyLoadSaver methods must be implemented on a pointer to %T", v.Interface())
+			return nil, fmt.Errorf("datastore: PropertyLoadSaver methods must be implemented on a pointer to %T.", v.Interface())
 		}
 
 		v = v.Addr()

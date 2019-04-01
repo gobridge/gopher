@@ -1,4 +1,4 @@
-// Copyright 2014 Google LLC
+// Copyright 2014 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ package datastore
 
 import (
 	"bytes"
-	"context"
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
@@ -24,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 	pb "google.golang.org/genproto/googleapis/datastore/v1"
 )
 

@@ -1,4 +1,4 @@
-// Copyright 2016 Google LLC
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,11 +65,10 @@ package fields
 
 import (
 	"bytes"
-	"errors"
 	"reflect"
 	"sort"
-	"strings"
-	"sync"
+
+	"cloud.google.com/go/internal/atomiccache"
 )
 
 // A Field records information about a struct field.
@@ -84,17 +83,10 @@ type Field struct {
 	equalFold func(s, t []byte) bool
 }
 
-// ParseTagFunc is a function that accepts a struct tag and returns four values: an alternative name for the field
-// extracted from the tag, a boolean saying whether to keep the field or ignore  it, additional data that is stored
-// with the field information to avoid having to parse the tag again, and an error.
 type ParseTagFunc func(reflect.StructTag) (name string, keep bool, other interface{}, err error)
 
-// ValidateFunc is a function that accepts a reflect.Type and returns an error if the struct type is invalid in any
-// way.
 type ValidateFunc func(reflect.Type) error
 
-// LeafTypesFunc is a function that accepts a reflect.Type and returns true if the struct type a leaf, or false if not.
-// TODO(deklerk) is this description accurate?
 type LeafTypesFunc func(reflect.Type) bool
 
 // A Cache records information about the fields of struct types.
@@ -104,7 +96,7 @@ type Cache struct {
 	parseTag  ParseTagFunc
 	validate  ValidateFunc
 	leafTypes LeafTypesFunc
-	cache     sync.Map // from reflect.Type to cacheValue
+	cache     atomiccache.Cache // from reflect.Type to cacheValue
 }
 
 // NewCache constructs a Cache.
@@ -211,19 +203,13 @@ type cacheValue struct {
 // This code has been copied and modified from
 // https://go.googlesource.com/go/+/go1.7.3/src/encoding/json/encode.go.
 func (c *Cache) cachedTypeFields(t reflect.Type) (List, error) {
-	var cv cacheValue
-	x, ok := c.cache.Load(t)
-	if ok {
-		cv = x.(cacheValue)
-	} else {
+	cv := c.cache.Get(t, func() interface{} {
 		if err := c.validate(t); err != nil {
-			cv = cacheValue{nil, err}
-		} else {
-			f, err := c.typeFields(t)
-			cv = cacheValue{List(f), err}
+			return cacheValue{nil, err}
 		}
-		c.cache.Store(t, cv)
-	}
+		f, err := c.typeFields(t)
+		return cacheValue{List(f), err}
+	}).(cacheValue)
 	return cv.fields, cv.err
 }
 
@@ -455,26 +441,4 @@ func dominantField(fs []Field) (Field, bool) {
 		return Field{}, false
 	}
 	return fs[0], true
-}
-
-// ParseStandardTag extracts the sub-tag named by key, then parses it using the
-// de facto standard format introduced in encoding/json:
-//   "-" means "ignore this tag". It must occur by itself. (parseStandardTag returns an error
-//       in this case, whereas encoding/json accepts the "-" even if it is not alone.)
-//   "<name>" provides an alternative name for the field
-//   "<name>,opt1,opt2,..." specifies options after the name.
-// The options are returned as a []string.
-func ParseStandardTag(key string, t reflect.StructTag) (name string, keep bool, options []string, err error) {
-	s := t.Get(key)
-	parts := strings.Split(s, ",")
-	if parts[0] == "-" {
-		if len(parts) > 1 {
-			return "", false, nil, errors.New(`"-" field tag with options`)
-		}
-		return "", false, nil, nil
-	}
-	if len(parts) > 1 {
-		options = parts[1:]
-	}
-	return parts[0], true, options, nil
 }
