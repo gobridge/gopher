@@ -54,6 +54,7 @@ type (
 		logf        Logger
 		dsClient    *datastore.Client
 		traceClient *trace.Client
+		opsChannel  string
 
 		goTimeLastNotified time.Time
 	}
@@ -72,16 +73,18 @@ func (b *Bot) getID(ctx context.Context) (string, error) {
 }
 
 // Init must be called before anything else in order to initialize the bot
-func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error {
+func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span, opsChannel string) error {
 	initSpan := span.NewChild("b.Init")
 	defer initSpan.Finish()
+
+	b.opsChannel = opsChannel
 
 	b.logf("Determining bot / user IDs")
 
 	var err error
 	b.id, err = b.getID(ctx)
 	if err != nil {
-		b.logf("Error getting bot user id: %s\n",err)
+		b.logf("Error getting bot user id: %s\n", err)
 	}
 
 	b.msgprefix = strings.ToLower("<@" + b.id + ">")
@@ -119,19 +122,18 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span) error 
 	}
 
 	b.logf("Initialized %s with ID (%q) and msgprefix (%q) \n", b.name, b.id, b.msgprefix)
-  //TODO: Get this working again to a channel
-	/*
-	params := slack.PostMessageParameters{AsUser: true}
-	childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
-	//TODO: This is the hard coded channel id of #gobridge-ops
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, "G207C8R1R", fmt.Sprintf(`Deployed version: %s`, b.version), params)
-	childSpan.Finish()
+	if b.opsChannel != "" {
+		params := slack.PostMessageParameters{AsUser: true}
+		childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
+		//TODO: This is the hard coded channel id of #gobridge-ops
+		_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.opsChannel, fmt.Sprintf(`Deployed version: %s`, b.version), params)
+		childSpan.Finish()
 
-	if err != nil {
-		b.logf(`failed to deploy version: %s`, b.version)
+		if err != nil {
+			b.logf(`failed to deploy version: %s`, b.version)
+		}
 	}
-	*/
-	
+
 	welcomeMessage = `,
 
 
@@ -178,9 +180,9 @@ func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 	defer span.Finish()
 
 	/*
-	if b.devMode {
-		return
-	}
+		if b.devMode {
+			return
+		}
 	*/
 
 	message := `Hello ` + event.User.Name + welcomeMessage
@@ -197,7 +199,7 @@ func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 	prefixes := []string{
 		b.msgprefix,
-		"gopher",
+		"gopher", // emoji :gopher: or text `gopher`
 	}
 
 	for _, p := range prefixes {
@@ -206,8 +208,7 @@ func (b *Bot) isBotMessage(event *slack.MessageEvent, eventText string) bool {
 		}
 	}
 
-	// Direct message channels always starts with 'D'
-	return strings.HasPrefix(event.Channel, "D")
+	return strings.HasPrefix(event.Channel, "D") // direct message
 }
 
 func (b *Bot) trimBot(msg string) string {
@@ -220,10 +221,10 @@ func (b *Bot) trimBot(msg string) string {
 
 // limit access to certain functionality
 func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent) bool {
-	if restriction == "golang_cls" {
+	switch restriction {
+	case "golang_cls":
 		return event.Channel == b.channels["golang_cls"].slackID
 	}
-
 	return false
 }
 
@@ -938,7 +939,7 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
 
-		users: 	 map[string]string{},
+		users: map[string]string{},
 
 		channels: map[string]slackChan{
 			"golang-newbies": {description: "for newbie resources", welcome: true},

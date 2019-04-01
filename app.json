@@ -27,6 +27,13 @@
     },
     "GOOGLE_PROJECT_ID": {
       "description": "The ID of the google project"
+    },
+    "GO_LINKER_SYMBOL": {
+      "description": "The symbol to set to the git sha/version tag. Do not change.",
+      "value": "botVersion"
+    },
+    "OPS_CHANNEL": {
+      "description": "The ops channel to post informative info to"
     }
   },
   "environments": {
@@ -40,7 +47,8 @@
         "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN": "CHANGE_ME",
         "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET": "CHANGE_ME",
         "GOOGLE_CREDENTIALS": "CHANGE_ME",
-        "GOOGLE_PROJECT_ID": "CHANGE_ME"
+        "GOOGLE_PROJECT_ID": "CHANGE_ME",
+        "GO_LINKER_SYMBOL": "botVersion"
       }
     }
   }
