@@ -55,6 +55,11 @@ var (
 	info       = `{ "version": "` + BotVersion + `" }`
 )
 
+// decode the base64 encoded google credential file data to a temporary file on the file system.
+// This allows credential information to be placed into a single config var like so:
+// export GOOGLE_CREDENTIALS="$(base64 ./path/to/credential/file.json)"
+// or
+// heroku config:set GOOGLE_CREDENTIALS="$(base64 ./path/to/credential/file.json)"
 func decodeGoogleCredentialsToFile(ec string) string {
 	r := base64.NewDecoder(base64.StdEncoding, strings.NewReader(ec))
 	b, err := ioutil.ReadAll(r)

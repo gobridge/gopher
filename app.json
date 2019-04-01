@@ -23,7 +23,7 @@
       "description": "DOCUMENT ME"
     },
     "GOOGLE_CREDENTIALS": {
-      "description": "Base64 encoded JSON Google credentials file"
+      "description": "Base64 encoded JSON Google credentials file: heroku config:set GOOGLE_CREDENTIALS=\"$(base64 ./path/to/credential/file.json)\""
     },
     "GOOGLE_PROJECT_ID": {
       "description": "The ID of the google project"
