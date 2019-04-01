@@ -3,12 +3,12 @@ package bot
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"fmt"
 	"io/ioutil"
-	mathrand "math/rand"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -265,6 +265,8 @@ var (
 		"flip coin":            flipCoin,
 		"flip a coin":          flipCoin,
 		"version":              botVersion,
+		"where do you live?":   stack,
+		"stack":                stack,
 	}
 
 	botEventTextToResponse = map[string][]string{
@@ -322,11 +324,6 @@ var (
 		"source code": {
 			`My source code is here <https://github.com/gopheracademy/gopher>`,
 		},
-		"stack": {
-			`I'm currently living in the Clouds, powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine>.`,
-			`I find my way to home using CircleCI <https://circleci.com> and Kubernetes (k8s) <http://kubernetes.io>.`,
-			`You can find my heart at: <https://github.com/gopheracademy/gopher>.`,
-		},
 		"dependency injection": {
 			`If you'd like to learn more about how to use Dependency Injection in Go, please review this post:`,
 			`- <https://appliedgo.net/di/>`,
@@ -371,7 +368,6 @@ var (
 		"databases":            "database tutorial",
 		"gotchas":              "avoid gotchas",
 		"source":               "source code",
-		"where do you live?":   "stack",
 		"package structure":    "package layout",
 		"project structure":    "package layout",
 		"project layout":       "package layout",
@@ -427,13 +423,13 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 	for needle, tr := range containsToReactions {
 		if strings.Contains(eventText, needle) {
 			if _, ok := reactWithMessage[needle]; ok {
-				if !tr.rand || mathrand.Intn(150) == 0x2A {
+				if !tr.rand || rand.Intn(150) == 0x2A {
 					for _, reaction := range tr.reactions {
 						respond(ctx, b, event, reaction)
 					}
 				}
 			} else {
-				if !tr.rand || mathrand.Intn(150) == 0x2A {
+				if !tr.rand || rand.Intn(150) == 0x2A {
 					for _, reaction := range tr.reactions {
 						b.reactToEvent(ctx, event, reaction)
 					}
@@ -766,16 +762,34 @@ func respond(ctx context.Context, b *Bot, event *slack.MessageEvent, response st
 	}
 }
 
+func respondUnfurled(ctx context.Context, b *Bot, event *slack.MessageEvent, response string) {
+	if b.devMode {
+		b.logf("should reply to message %s with %s\n", event.Text, response)
+	}
+	params := slack.PostMessageParameters{
+		AsUser:          true,
+		ThreadTimestamp: event.ThreadTimestamp,
+		UnfurlLinks:     true,
+		UnfurlMedia:     true,
+	}
+	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, response, params)
+	if err != nil {
+		b.logf("%s\n", err)
+	}
+}
+
+var (
+	libraryText = []string{"library for", "library in go for", "go library for"}
+)
+
 func searchLibrary(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	searchTerm := strings.ToLower(event.Text)
-	if idx := strings.Index(searchTerm, "library for"); idx != -1 {
-		searchTerm = event.Text[idx+11:]
-	} else if idx := strings.Index(searchTerm, "library in go for"); idx != -1 {
-		searchTerm = event.Text[idx+17:]
-	} else if idx := strings.Index(searchTerm, "go library for"); idx != -1 {
-		searchTerm = event.Text[idx+14:]
+	for _, t := range libraryText {
+		if idx := strings.Index(searchTerm, t); idx != -1 {
+			searchTerm = event.Text[idx+len(t):]
+			break
+		}
 	}
-
 	searchTerm = b.slackLinkRE.ReplaceAllString(searchTerm, "")
 	searchTerm = b.emojiRE.ReplaceAllString(searchTerm, "")
 
@@ -788,12 +802,7 @@ func searchLibrary(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 		return
 	}
 	searchTerm = url.QueryEscape(searchTerm)
-	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
-	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
+	respond(ctx, b, event, `You can try to look here: <https://godoc.org/?q=`+searchTerm+`> or here <http://go-search.org/search?q=`+searchTerm+`>`)
 }
 
 var xkcdAliases = map[string]int{
@@ -823,19 +832,7 @@ func xkcd(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 		comicID = num
 	}
 
-	imageLink := fmt.Sprintf("<https://xkcd.com/%d/>", comicID)
-
-	params := slack.PostMessageParameters{
-		AsUser:          true,
-		ThreadTimestamp: event.ThreadTimestamp,
-		UnfurlLinks:     true,
-		UnfurlMedia:     true,
-	}
-	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, imageLink, params)
-	if err != nil {
-		b.logf("error while sending xkcd message: %s\n", err)
-		return
-	}
+	respondUnfurled(ctx, b, event, fmt.Sprintf("<https://xkcd.com/%d/>", comicID))
 }
 
 var regexSongNolink = regexp.MustCompile(`(?i)(nolink|song\.link)`)
@@ -882,13 +879,8 @@ func (b *Bot) godoc(ctx context.Context, event *slack.MessageEvent, prefix strin
 	if strings.Contains(link, " ") {
 		link = link[:strings.Index(link, " ")]
 	}
-
-	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
-	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.Channel, `<https://godoc.org/`+prefix+link+`>`, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
+	link = `<https://godoc.org/` + prefix + link + `>`
+	respond(ctx, b, event, link)
 }
 
 func (b *Bot) reactToEvent(ctx context.Context, event *slack.MessageEvent, reaction string) {
@@ -906,31 +898,35 @@ func (b *Bot) reactToEvent(ctx context.Context, event *slack.MessageEvent, react
 	}
 }
 
-func botVersion(ctx context.Context, b *Bot, event *slack.MessageEvent) {
-	params := slack.PostMessageParameters{AsUser: true}
-	_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf("My version is: %s", b.version), params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
+func stack(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+	var msg string
+	dyno := os.Getenv("DYNO")
+	switch {
+	case len(dyno) >= 3:
+		msg = `I'm currently powered by Heroku <https://heroku.com>.`
+	default:
+		msg = `I'm currently powered by Google Container Engine (GKE) <https://cloud.google.com/container-engine> and Kubernetes (k8s) <http://kubernetes.io>.`
 	}
+	msg += "\nYou can find my source code at: <https://github.com/gobridge/gopher>."
+	respond(ctx, b, event, msg)
+}
+
+func botVersion(ctx context.Context, b *Bot, event *slack.MessageEvent) {
+	respond(ctx, b, event, fmt.Sprintf("My version is: %s", b.version))
 }
 
 func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
-	buff := make([]byte, 1)
-	_, err := rand.Read(buff)
-	if err != nil {
-		b.logf("%s\n", err)
+	var msg string
+	val := rand.Intn(2)
+	switch val {
+	case 0:
+		msg = "heads"
+	case 1:
+		msg = "tails"
+	default:
+		panic(fmt.Sprintf("expected rand.Intn(2) to be 0 or 1, got %d", val))
 	}
-	result := "heads"
-	if buff[0]%2 == 0 {
-		result = "tails"
-	}
-	params := slack.PostMessageParameters{AsUser: true, ThreadTimestamp: event.ThreadTimestamp}
-	_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.Channel, result, params)
-	if err != nil {
-		b.logf("%s\n", err)
-		return
-	}
+	respond(ctx, b, event, msg)
 }
 
 // NewBot will create a new Slack bot
