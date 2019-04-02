@@ -111,7 +111,7 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span, opsCha
 	botGroups, err := b.slackBotAPI.GetGroupsContext(ctx, true)
 	childSpan.Finish()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get groups: %v", err)
 	}
 
 	for _, group := range botGroups {
@@ -616,7 +616,7 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 
 	req, err := http.NewRequest("GET", info.URLPrivateDownload, nil)
 	if err != nil {
-		b.logf("error creating playground request: ", err)
+		b.logf("error creating playground request to %q: %v\n", info.URLPrivateDownload, err)
 		return
 	}
 	req.Header.Add("User-Agent", "Gophers Slack bot")

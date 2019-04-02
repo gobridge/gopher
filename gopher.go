@@ -160,9 +160,9 @@ func main() {
 	startupSpan := traceClient.NewSpan("b.main")
 	ctx = trace.NewContext(ctx, startupSpan)
 
-	traceHttpClient := traceClient.NewHTTPClient(httpClient)
+	traceHTTPClient := traceClient.NewHTTPClient(httpClient)
 
-	slack.SetHTTPClient(traceHttpClient)
+	slack.SetHTTPClient(traceHTTPClient)
 	slackBotAPI := slack.New(slackBotToken)
 
 	botName = strings.TrimPrefix(botName, "@")
@@ -185,7 +185,7 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHttpClient, gerritLink, botName, slackBotToken, BotVersion, devMode, log.Printf)
+	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHTTPClient, gerritLink, botName, slackBotToken, BotVersion, devMode, log.Printf)
 	if err := b.Init(ctx, slackBotRTM, startupSpan, opsChannel); err != nil {
 		log.Fatalln("Unable to init bot:", err)
 	}

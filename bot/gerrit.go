@@ -109,12 +109,17 @@ func (b *Bot) updateCL(ctx context.Context, key *datastore.Key, cl *storedCL) er
 
 func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) int {
 	req, err := http.NewRequest("GET", b.gerritLink, nil)
+	if err != nil {
+		b.logf("failed to build GET request to %q: %v\n", b.gerritLink, err)
+		return lastID
+	}
+
 	req.Header.Add("User-Agent", "Gophers Slack bot")
 	req = req.WithContext(ctx)
 
 	resp, err := b.client.Do(req)
 	if err != nil {
-		b.logf("%s\n", err)
+		b.logf("failed to get data from Gerrit: %v\n", err)
 		return lastID
 	}
 
@@ -163,7 +168,7 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 	for idx := foundIdx - 1; idx >= 0; idx-- {
 		cl := cls[idx]
 
-		if shown, err := b.wasShown(ctx, cl); err == nil {
+		if shown, wserr := b.wasShown(ctx, cl); wserr == nil {
 			if shown {
 				continue
 			}
@@ -238,7 +243,7 @@ func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 			b.logf("could not convert string to int: %v from event: %#v\n", err, event)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -252,7 +257,7 @@ func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 			b.logf("error while retriving CL from the DB: %v\n", err)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -261,7 +266,7 @@ func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 
 		if cl.Tweeted {
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Already tweeted CL %d`, clNumber), params)
+			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Already tweeted CL %d`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
@@ -272,7 +277,7 @@ func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 			b.logf("got error while tweeting CL: %d %#v\n", clNumber, err)
 
 			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
+			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
 			if err != nil {
 				b.logf("%s\n", err)
 			}
