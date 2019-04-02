@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io/ioutil"
+	mathrand "math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -230,19 +231,25 @@ func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent)
 
 var (
 	// Generic responses to all messages
-	containsToReactions = map[string][]string{
-		"︵":                          {"┬─┬ノ( º _ ºノ)"},
-		"彡":                          {"┬─┬ノ( º _ ºノ)"},
-		"my adorable little gophers": {"gopher"},
-		"bbq":                        {"bbqgopher"},
-		"buffalo":                    {"gobuffalo"},
-		"gobuffalo":                  {"gobuffalo"},
-		"ghost":                      {"ghost"},
-		"ermergerd":                  {"dragon"},
-		"ermahgerd":                  {"dragon"},
-		"dragon":                     {"dragon"},
-		"spacex":                     {"rocket"},
-		"beer me":                    {"beer", "beers"},
+	containsToReactions = map[string]struct {
+		reactions []string
+		rand      bool
+	}{
+		"︵": {reactions: []string{"┬─┬ノ( º _ ºノ)"}},
+		"彡": {reactions: []string{"┬─┬ノ( º _ ºノ)"}},
+		"my adorable little gophers": {reactions: []string{"gopher"}},
+		"bbq":       {reactions: []string{"bbqgopher"}},
+		"buffalo":   {reactions: []string{"gobuffalo"}},
+		"gobuffalo": {reactions: []string{"gobuffalo"}},
+		"ghost":     {reactions: []string{"ghost"}},
+		"ermergerd": {reactions: []string{"dragon"}},
+		"ermahgerd": {reactions: []string{"dragon"}},
+		"dragon":    {reactions: []string{"dragon"}},
+		"spacex":    {reactions: []string{"rocket"}},
+		"beer me":   {reactions: []string{"beer", "beers"}},
+		"spacemacs": {reactions: []string{"spacemacs"}},
+		"emacs":     {reactions: []string{"vim"}, rand: true},
+		"vim":       {reactions: []string{"emacs"}, rand: true},
 	}
 
 	reactWithMessage = map[string]struct{}{
@@ -420,15 +427,19 @@ func (b *Bot) HandleMessage(event *slack.MessageEvent) {
 
 	// Reactions to all messages (including those not directed at the bot)
 	// that contain a certain string
-	for needle, reactions := range containsToReactions {
+	for needle, tr := range containsToReactions {
 		if strings.Contains(eventText, needle) {
 			if _, ok := reactWithMessage[needle]; ok {
-				for _, reaction := range reactions {
-					respond(ctx, b, event, reaction)
+				if !tr.rand || mathrand.Intn(150) == 0x2A {
+					for _, reaction := range tr.reactions {
+						respond(ctx, b, event, reaction)
+					}
 				}
 			} else {
-				for _, reaction := range reactions {
-					b.reactToEvent(ctx, event, reaction)
+				if !tr.rand || mathrand.Intn(150) == 0x2A {
+					for _, reaction := range tr.reactions {
+						b.reactToEvent(ctx, event, reaction)
+					}
 				}
 			}
 			return
