@@ -5,18 +5,6 @@ cloud.google.com/go/internal/fields
 cloud.google.com/go/internal/version
 cloud.google.com/go/internal/atomiccache
 cloud.google.com/go/compute/metadata
-# github.com/ChimeraCoder/anaconda v0.0.0-20170408212338-51200854e890
-github.com/ChimeraCoder/anaconda
-# github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7
-github.com/ChimeraCoder/tokenbucket
-# github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330
-github.com/azr/backoff
-# github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc
-github.com/dustin/go-jsonpointer
-# github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad
-github.com/dustin/gojson
-# github.com/garyburd/go-oauth v0.0.0-20170216215133-4f191fd0442e
-github.com/garyburd/go-oauth/oauth
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes/timestamp

@@ -1,13 +1,1 @@
-.idea/workspace.xml
-.idea/misc.xml
-.idea/libraries
-sa.yaml
-secrets.yaml
-secrets-datastore.yaml
-secrets-trace.yaml
-secrets-twitter.yaml
-datastore.json
-kubeconfig.yaml
-kubeconfig
 gopher
-dd-agent.yaml

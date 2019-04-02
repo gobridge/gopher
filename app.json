@@ -10,18 +10,6 @@
       "description": "boolean, set the bot in development mode",
       "value": true
     },
-    "GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY": {
-      "description": "DOCUMENT ME"
-    },
-    "GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET": {
-      "description": "DOCUMENT ME"
-    },
-    "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN": {
-      "description": "DOCUMENT ME"
-    },
-    "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET": {
-      "description": "DOCUMENT ME"
-    },
     "GOOGLE_CREDENTIALS": {
       "description": "Base64 encoded JSON Google credentials file: heroku config:set GOOGLE_CREDENTIALS=\"$(base64 ./path/to/credential/file.json)\""
     },
@@ -42,10 +30,6 @@
         "GOPHERS_SLACK_BOT_TOKEN": "CHANGE_ME",
         "GOPHERS_SLACK_BOT_NAME": "CHANGE_ME",
         "GOPHERS_SLACK_BOT_DEV_MODE": true,
-        "GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY": "CHANGE_ME",
-        "GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET": "CHANGE_ME",
-        "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN": "CHANGE_ME",
-        "GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET": "CHANGE_ME",
         "GOOGLE_CREDENTIALS": "CHANGE_ME",
         "GOOGLE_PROJECT_ID": "CHANGE_ME",
         "GO_LINKER_SYMBOL": "botVersion"

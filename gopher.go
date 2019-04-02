@@ -39,7 +39,6 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/trace"
-	"github.com/ChimeraCoder/anaconda"
 	"github.com/gorilla/mux"
 	"github.com/nlopes/slack"
 	"golang.org/x/net/context"
@@ -87,10 +86,6 @@ func main() {
 
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
 	slackBotToken := os.Getenv("GOPHERS_SLACK_BOT_TOKEN")
-	twitterConsumerKey := os.Getenv("GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY")
-	twitterConsumerSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET")
-	twitterAccessToken := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN")
-	twitterAccessTokenSecret := os.Getenv("GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET")
 	googleCredentials := os.Getenv("GOOGLE_CREDENTIALS")
 	googleProjectID := os.Getenv("GOOGLE_PROJECT_ID")
 	opsChannel := os.Getenv("OPS_CHANNEL")
@@ -105,27 +100,6 @@ func main() {
 			log.Fatalln("bot name must be set in GOPHERS_SLACK_BOT_NAME")
 		}
 		botName = "tempbot"
-	}
-
-	twitter := true
-	if twitterConsumerKey == "" {
-		log.Println("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_KEY; Twitter support disabled.")
-		twitter = false
-	}
-
-	if twitterConsumerSecret == "" {
-		log.Println("missing GOPHER_SLACK_BOT_TWITTER_CONSUMER_SECRET; Twitter support disabled.")
-		twitter = false
-	}
-
-	if twitterAccessToken == "" {
-		log.Println("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN; Twitter support disabled.")
-		twitter = false
-	}
-
-	if twitterAccessTokenSecret == "" {
-		log.Println("missing GOPHER_SLACK_BOT_TWITTER_ACCESS_TOKEN_SECRET; Twitter support disabled.")
-		twitter = false
 	}
 
 	if googleCredentials == "" {
@@ -167,13 +141,6 @@ func main() {
 
 	botName = strings.TrimPrefix(botName, "@")
 
-	var twitterAPI *anaconda.TwitterApi
-	if twitter {
-		anaconda.SetConsumerKey(twitterConsumerKey)
-		anaconda.SetConsumerSecret(twitterConsumerSecret)
-		twitterAPI = anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
-	}
-
 	rtmOptions := &slack.RTMOptions{}
 	slackBotRTM := slackBotAPI.NewRTMWithOptions(rtmOptions)
 	go slackBotRTM.ManageConnection()
@@ -185,7 +152,7 @@ func main() {
 	}
 	defer dsClient.Close()
 
-	b := bot.NewBot(slackBotAPI, dsClient, traceClient, twitterAPI, traceHTTPClient, gerritLink, botName, slackBotToken, BotVersion, devMode, log.Printf)
+	b := bot.NewBot(slackBotAPI, dsClient, traceClient, traceHTTPClient, gerritLink, botName, slackBotToken, BotVersion, devMode, log.Printf)
 	if err := b.Init(ctx, slackBotRTM, startupSpan, opsChannel); err != nil {
 		log.Fatalln("Unable to init bot:", err)
 	}

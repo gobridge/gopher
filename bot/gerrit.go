@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -143,7 +142,7 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 
 	// Fix Gerrit adding a random prefix )]}'
 	body = body[4:]
-	cls := []gerritCL{}
+	cls := make([]gerritCL, 0)
 	err = json.Unmarshal(body, &cls)
 	if err != nil {
 		b.logf("%s\n", err)
@@ -210,14 +209,6 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 	return lastID
 }
 
-func (b *Bot) tweet(msg string, v url.Values) error {
-	if b.twitterAPI != nil {
-		_, err := b.twitterAPI.PostTweet(msg, v)
-		return err
-	}
-	return fmt.Errorf("twitterAPI isn't setup to send tweet")
-}
-
 func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 	// repeats some earlier work but oh well
 	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
@@ -264,27 +255,6 @@ func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 			continue
 		}
 
-		if cl.Tweeted {
-			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Already tweeted CL %d`, clNumber), params)
-			if err != nil {
-				b.logf("%s\n", err)
-			}
-			continue
-		}
-
-		if err := b.tweet(cl.Message+" "+cl.URL, nil); err != nil {
-			b.logf("got error while tweeting CL: %d %#v\n", clNumber, err)
-
-			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
-			if err != nil {
-				b.logf("%s\n", err)
-			}
-			continue
-		}
-
-		cl.Tweeted = true
 		err = b.updateCL(ctx, key, cl)
 		if err != nil {
 			b.logf("got error while updating CL to datastore: %v", err)

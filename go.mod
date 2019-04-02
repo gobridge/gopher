@@ -2,12 +2,6 @@ module github.com/gobridge/gopher
 
 require (
 	cloud.google.com/go v0.0.0-20170526215759-7eaaec940b71
-	github.com/ChimeraCoder/anaconda v0.0.0-20170408212338-51200854e890
-	github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7 // indirect
-	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
-	github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc // indirect
-	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad // indirect
-	github.com/garyburd/go-oauth v0.0.0-20170216215133-4f191fd0442e // indirect
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v0.0.0-20170427041250-4c1c3952b7d9

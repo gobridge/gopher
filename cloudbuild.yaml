@@ -1,7 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/go:alpine'
-  args: ['build', '-tags', 'netgo', '-installsuffix', 'netgo', '-ldflags', "-X main.botVersion=$REVISION_ID", '-o', 'gopher', 'github.com/gopheracademy/gopher']
-  env: ['CGO_ENABLED=0', 'PROJECT_ROOT=github.com/gopheracademy/gopher']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'eu.gcr.io/$PROJECT_ID/cb-bot/$REVISION_ID', '.']
-images: ['eu.gcr.io/$PROJECT_ID/cb-bot/$REVISION_ID']

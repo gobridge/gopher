@@ -16,7 +16,6 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/trace"
-	"github.com/ChimeraCoder/anaconda"
 	"github.com/nlopes/slack"
 )
 
@@ -51,7 +50,6 @@ type (
 		slackLinkRE *regexp.Regexp
 		channels    map[string]slackChan
 		slackBotAPI *slack.Client
-		twitterAPI  *anaconda.TwitterApi
 		logf        Logger
 		dsClient    *datastore.Client
 		traceClient *trace.Client
@@ -126,10 +124,8 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span, opsCha
 	if b.opsChannel != "" {
 		params := slack.PostMessageParameters{AsUser: true}
 		childSpan = initSpan.NewChild("b.AnnouncingStartupFinish")
-		//TODO: This is the hard coded channel id of #gobridge-ops
 		_, _, err = b.slackBotAPI.PostMessageContext(ctx, b.opsChannel, fmt.Sprintf(`Deployed version: %s`, b.version), params)
 		childSpan.Finish()
-
 		if err != nil {
 			b.logf(`failed to deploy version: %s`, b.version)
 		}
@@ -930,7 +926,7 @@ func flipCoin(ctx context.Context, b *Bot, event *slack.MessageEvent) {
 }
 
 // NewBot will create a new Slack bot
-func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *trace.Client, twitterAPI *anaconda.TwitterApi, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
+func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *trace.Client, httpClient Client, gerritLink, name, token, version string, devMode bool, log Logger) *Bot {
 	return &Bot{
 		gerritLink:  gerritLink,
 		name:        name,
@@ -942,7 +938,6 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 		slackBotAPI: slackBotAPI,
 		dsClient:    dsClient,
 		traceClient: traceClient,
-		twitterAPI:  twitterAPI,
 
 		emojiRE:     regexp.MustCompile(`:[[:alnum:]]+:`),
 		slackLinkRE: regexp.MustCompile(`<((?:@u)|(?:#c))[0-9a-z]+>`),
