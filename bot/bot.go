@@ -322,7 +322,7 @@ var (
 			`Read this article if you want to understand and avoid common gotchas in Go <https://divan.github.io/posts/avoid_gotchas>`,
 		},
 		"source code": {
-			`My source code is here <https://github.com/gopheracademy/gopher>`,
+			`My source code is here <https://github.com/gobridge/gopher>`,
 		},
 		"dependency injection": {
 			`If you'd like to learn more about how to use Dependency Injection in Go, please review this post:`,
