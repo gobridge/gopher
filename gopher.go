@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -80,6 +81,8 @@ func decodeGoogleCredentialsToFile(ec string) string {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	log.SetFlags(log.Lshortfile)
 
 	botName := os.Getenv("GOPHERS_SLACK_BOT_NAME")
