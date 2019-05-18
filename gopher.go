@@ -112,15 +112,17 @@ func main() {
 		googleCredentials = decodeGoogleCredentialsToFile(googleCredentials)
 	}
 
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout:   15 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).Dial,
-			TLSHandshakeTimeout:   5 * time.Second,
-			ResponseHeaderTimeout: 10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+	traceHTTPClient := &http.Client{
+		Transport: trace.Transport{
+			Base: &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout:   15 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).Dial,
+				TLSHandshakeTimeout:   5 * time.Second,
+				ResponseHeaderTimeout: 10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
 		},
 	}
 
@@ -133,8 +135,6 @@ func main() {
 
 	startupSpan := traceClient.NewSpan("b.main")
 	ctx = trace.NewContext(ctx, startupSpan)
-
-	traceHTTPClient := traceClient.NewHTTPClient(httpClient)
 
 	slack.SetHTTPClient(traceHTTPClient)
 	slackBotAPI := slack.New(slackBotToken)
