@@ -945,12 +945,13 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 		users: map[string]string{},
 
 		channels: map[string]slackChan{
-			"golang-newbies": {description: "for newbie resources", welcome: true},
-			"reviews":        {description: "for code reviews", welcome: true},
-			"gotimefm":       {description: "for the awesome live podcast", welcome: true},
-			"remotemeetup":   {description: "for remote meetup", welcome: true},
-			"showandtell":    {description: "for telling the world about the thing you are working on", welcome: true},
-			"jobs":           {description: "for jobs related to Go", welcome: true},
+			"general":      {description: "for general Go questions or help", welcome: true},
+			"newbies":      {description: "for newbie resources", welcome: true},
+			"reviews":      {description: "for code reviews", welcome: true},
+			"gotimefm":     {description: "for the awesome live podcast", welcome: true},
+			"remotemeetup": {description: "for remote meetup", welcome: true},
+			"showandtell":  {description: "for telling the world about the thing you are working on", welcome: true},
+			"jobs":         {description: "for jobs related to Go", welcome: true},
 
 			"performance": {description: "anything and everything performance related"},
 			"devops":      {description: "for devops related discussions"},
@@ -960,8 +961,8 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 			"golang-cls":  {description: "get real time udates from the merged CL for Go itself. For a currated list of important / interesting messages follow: https://twitter.com/golang_cls"},
 			"bbq":         {description: "Go controlling your bbq grill? Yes, we have that"},
 
-			"general":    {description: "general channel", special: true},
-			"golang_cls": {description: "https://twitter.com/golang_cls", special: true},
+			"announcements": {description: "community / ecosystem announcements channel", special: true},
+			"golang_cls":    {description: "https://twitter.com/golang_cls", special: true},
 		},
 	}
 }
