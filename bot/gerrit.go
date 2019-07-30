@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -162,8 +160,6 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 		pubChannel = pubChannel[1:]
 	}
 
-	pvtChannel := b.channels["golang_cls"].slackID
-
 	for idx := foundIdx - 1; idx >= 0; idx-- {
 		cl := cls[idx]
 
@@ -191,81 +187,16 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 			return lastID
 		}
 
-		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pvtChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
-		if err != nil {
-			b.logf("Error Posting Message to %s: %s\n", pvtChannel, err)
-			continue
-		}
-
-		lastID = cl.Number
-
 		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pubChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue
 		}
+
+		lastID = cl.Number
 	}
 
 	return lastID
-}
-
-func shareCL(ctx context.Context, b *Bot, event *slack.MessageEvent) {
-	// repeats some earlier work but oh well
-	eventText := strings.Trim(strings.ToLower(event.Text), " \n\r")
-	eventText = b.trimBot(eventText)
-
-	if !b.specialRestrictions("golang_cls", event) {
-		b.logf("share attempt caught: %#v\n", event)
-
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, `You are not authorized to share CLs`, params)
-		if err != nil {
-			b.logf("%s\n", err)
-		}
-		return
-	}
-
-	eventText = strings.Replace(eventText, "share cl", "", -1)
-	eventText = strings.Trim(eventText, " \n")
-
-	for _, text := range strings.Fields(eventText) {
-		clNumber, err := strconv.ParseInt(text, 10, 64)
-		if err != nil {
-			b.logf("could not convert string to int: %v from event: %#v\n", err, event)
-
-			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
-			if err != nil {
-				b.logf("%s\n", err)
-			}
-			continue
-		}
-
-		key := datastore.IDKey("GoCL", clNumber, nil)
-		query := datastore.NewQuery("GoCL").Ancestor(key)
-		key, cl, err := b.getCLFromDS(ctx, query)
-		if err != nil {
-			b.logf("error while retriving CL from the DB: %v\n", err)
-
-			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err = b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not share CL %d, please try again`, clNumber), params)
-			if err != nil {
-				b.logf("%s\n", err)
-			}
-			continue
-		}
-
-		err = b.updateCL(ctx, key, cl)
-		if err != nil {
-			b.logf("got error while updating CL to datastore: %v", err)
-
-			params := slack.PostMessageParameters{AsUser: true}
-			_, _, err := b.slackBotAPI.PostMessageContext(ctx, event.User, fmt.Sprintf(`Could not update tweet status for CL %d in the DB`, clNumber), params)
-			if err != nil {
-				b.logf("%s\n", err)
-			}
-		}
-	}
 }
 
 // MonitorGerrit handles the Gerrit changes

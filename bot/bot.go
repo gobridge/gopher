@@ -216,15 +216,6 @@ func (b *Bot) trimBot(msg string) string {
 	return msg
 }
 
-// limit access to certain functionality
-func (b *Bot) specialRestrictions(restriction string, event *slack.MessageEvent) bool {
-	switch restriction {
-	case "golang_cls":
-		return event.Channel == b.channels["golang_cls"].slackID
-	}
-	return false
-}
-
 var (
 	// Generic responses to all messages
 	containsToReactions = map[string]struct {
@@ -376,7 +367,6 @@ var (
 	botPrefixToFunc = map[string]slackHandler{
 		"xkcd:":       xkcd,
 		"library for": searchLibrary,
-		"share cl":    shareCL,
 	}
 
 	botContainsToReactions = map[string][]string{
@@ -958,11 +948,10 @@ func NewBot(slackBotAPI *slack.Client, dsClient *datastore.Client, traceClient *
 			"security":    {description: "for security related discussions"},
 			"aws":         {description: "if you are interested in AWS"},
 			"goreviews":   {description: "talk to the Go team about a certain CL"},
-			"golang-cls":  {description: "get real time udates from the merged CL for Go itself. For a currated list of important / interesting messages follow: https://twitter.com/golang_cls"},
+			"golang-cls":  {description: "get real time udates from the merged CL for Go itself"},
 			"bbq":         {description: "Go controlling your bbq grill? Yes, we have that"},
 
 			"announcements": {description: "community / ecosystem announcements channel", special: true},
-			"golang_cls":    {description: "https://twitter.com/golang_cls", special: true},
 		},
 	}
 }
