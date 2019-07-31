@@ -4,8 +4,10 @@ require (
 	cloud.google.com/go v0.39.0
 	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/gorilla/mux v1.7.2
+	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
-	github.com/nlopes/slack v0.0.0-20170528203044-b5c480d57859
+	github.com/nlopes/slack v0.5.0
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/net v0.0.0-20190514140710-3ec191127204
 	golang.org/x/oauth2 v0.0.0-20190517181255-950ef44c6e07 // indirect

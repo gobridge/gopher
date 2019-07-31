@@ -172,22 +172,22 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 			continue
 		}
 
-		msg := slack.Attachment{
-			Title:     cl.Subject,
-			TitleLink: cl.link(),
-			Text:      cl.Revisions[cl.CurrentRevision].Commit.Message,
-			Footer:    cl.ChangeID,
-		}
-		params := slack.PostMessageParameters{AsUser: true}
-		params.Attachments = append(params.Attachments, msg)
-
 		err = b.saveCL(ctx, cl)
 		if err != nil {
 			b.logf("got error while saving CL to datastore: %v", err)
 			return lastID
 		}
 
-		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pubChannel, fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), params)
+		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pubChannel,
+			slack.MsgOptionAsUser(true),
+			slack.MsgOptionText(fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), false),
+			slack.MsgOptionAttachments(slack.Attachment{
+				Title:     cl.Subject,
+				TitleLink: cl.link(),
+				Text:      cl.Revisions[cl.CurrentRevision].Commit.Message,
+				Footer:    cl.ChangeID,
+			}),
+		)
 		if err != nil {
 			b.logf("%s\n", err)
 			continue

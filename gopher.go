@@ -136,13 +136,13 @@ func main() {
 	startupSpan := traceClient.NewSpan("b.main")
 	ctx = trace.NewContext(ctx, startupSpan)
 
-	slack.SetHTTPClient(traceHTTPClient)
-	slackBotAPI := slack.New(slackBotToken)
+	slackBotAPI := slack.New(slackBotToken,
+		slack.OptionHTTPClient(traceHTTPClient),
+	)
 
 	botName = strings.TrimPrefix(botName, "@")
 
-	rtmOptions := &slack.RTMOptions{}
-	slackBotRTM := slackBotAPI.NewRTMWithOptions(rtmOptions)
+	slackBotRTM := slackBotAPI.NewRTM()
 	go slackBotRTM.ManageConnection()
 	runtime.Gosched()
 
