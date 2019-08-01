@@ -160,31 +160,30 @@ Now, enjoy the community and have fun.`
 }
 
 func (b *Bot) listChannels(ctx context.Context, span *trace.Span) ([]slack.Channel, error) {
-	childSpan := span.NewChild("slackApi.GetConversations")
-	childSpan.Finish()
+	childSpan := span.NewChild("Bot.listChannels")
+	defer childSpan.Finish()
 
 	params := &slack.GetConversationsParameters{
 		ExcludeArchived: "true",
 		Limit:           200,
 		Types: []string{
 			"public_channel",
-			"private_channl",
+			"private_channel",
 		},
 	}
 
-	channels, nextCursor, err := b.slackBotAPI.GetConversationsContext(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	params.Cursor = nextCursor
-
-	for params.Cursor != "" {
-		var pageChannels []slack.Channel
-		pageChannels, params.Cursor, err = b.slackBotAPI.GetConversationsContext(ctx, params)
+	var channels []slack.Channel
+	for {
+		cs, nextCursor, err := b.slackBotAPI.GetConversationsContext(ctx, params)
 		if err != nil {
 			return nil, err
 		}
-		channels = append(channels, pageChannels...)
+		channels = append(channels, cs...)
+
+		if nextCursor == "" {
+			break
+		}
+		params.Cursor = nextCursor
 	}
 
 	return channels, nil
@@ -619,10 +618,14 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 		return
 	}
 
+	// Empirically, attempting to call GetFileInfoContext too quickly after a
+	// file is uploaded can cause a "file_not_found" error.
+	time.Sleep(1 * time.Second)
+
 	for _, file := range event.Files {
 		info, _, _, err := b.slackBotAPI.GetFileInfoContext(ctx, file.ID, 0, 0)
 		if err != nil {
-			b.logf("error while getting file info: %v", err)
+			b.logf("error while getting file info for ID %q: %v", file.ID, err)
 			return
 		}
 
