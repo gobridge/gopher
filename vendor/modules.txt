@@ -20,10 +20,15 @@ github.com/golang/protobuf/ptypes/duration
 github.com/googleapis/gax-go/v2
 # github.com/gorilla/mux v1.7.2
 github.com/gorilla/mux
+# github.com/gorilla/websocket v1.4.0
+github.com/gorilla/websocket
 # github.com/hashicorp/golang-lru v0.5.1
 github.com/hashicorp/golang-lru/simplelru
-# github.com/nlopes/slack v0.0.0-20170528203044-b5c480d57859
+# github.com/nlopes/slack v0.5.0
 github.com/nlopes/slack
+github.com/nlopes/slack/slackutilsx
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors
 # go.opencensus.io v0.21.0
 go.opencensus.io/trace
 go.opencensus.io/plugin/ocgrpc
@@ -44,7 +49,6 @@ go.opencensus.io/internal/tagencoding
 go.opencensus.io/metric/metricproducer
 # golang.org/x/net v0.0.0-20190514140710-3ec191127204
 golang.org/x/net/context
-golang.org/x/net/websocket
 golang.org/x/net/trace
 golang.org/x/net/internal/timeseries
 golang.org/x/net/http2

@@ -47,9 +47,10 @@ func (b *Bot) GoTimeFM() {
 	timeNow := time.Now()
 	if status.Streaming && timeNow.Sub(b.goTimeLastNotified).Hours() > 24 {
 		b.goTimeLastNotified = timeNow
-		response := ":tada: GoTimeFM is now live :tada:"
-		params := slack.PostMessageParameters{AsUser: true}
-		_, _, err := b.slackBotAPI.PostMessageContext(ctx, b.channels["gotimefm"].slackID, response, params)
+		_, _, err := b.slackBotAPI.PostMessageContext(ctx, b.channels["gotimefm"].slackID,
+			slack.MsgOptionAsUser(true),
+			slack.MsgOptionText(":tada: GoTimeFM is now live :tada:", false),
+		)
 		if err != nil {
 			b.logf("got error while notifying slack: %s\n", err)
 		}
