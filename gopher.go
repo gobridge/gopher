@@ -157,23 +157,27 @@ func main() {
 		log.Fatalln("Unable to init bot:", err)
 	}
 
-	_, err = b.GetLastSeenCL(ctx)
-	if err != nil {
-		panic("Unable to GetLastSeenCL: " + err.Error())
-	}
-
-	go func() {
-		<-time.After(1 * time.Second)
-		for i := 0; i < 7; i++ {
-			b.MonitorGerrit(30 * time.Minute)
-			log.Printf("monitoring Gerrit failed %d times\n", i+1)
-			if i == 6 {
-				break
-			}
-			time.Sleep(time.Duration(i*10) * time.Second)
+	if !devMode {
+		_, err = b.GetLastSeenCL(ctx)
+		if err != nil {
+			panic("Unable to GetLastSeenCL: " + err.Error())
 		}
-		panic("monitoring Gerrit was terminated")
-	}()
+
+		go func() {
+			<-time.After(1 * time.Second)
+			for i := 0; i < 7; i++ {
+				b.MonitorGerrit(30 * time.Minute)
+				log.Printf("monitoring Gerrit failed %d times\n", i+1)
+				if i == 6 {
+					break
+				}
+				time.Sleep(time.Duration(i*10) * time.Second)
+			}
+			panic("monitoring Gerrit was terminated")
+		}()
+	} else {
+		log.Printf("gerrit updates disabled in devMode")
+	}
 
 	go func() {
 		for msg := range slackBotRTM.IncomingEvents {
