@@ -224,14 +224,14 @@ func main() {
 		log.Fatal(s.ListenAndServe())
 	}(traceClient)
 
-	go func() {
-		gotimefm := time.NewTicker(1 * time.Minute)
-		defer gotimefm.Stop()
+	// go func() {
+	// 	gotimefm := time.NewTicker(1 * time.Minute)
+	// 	defer gotimefm.Stop()
 
-		for range gotimefm.C {
-			b.GoTimeFM()
-		}
-	}()
+	// 	for range gotimefm.C {
+	// 		b.GoTimeFM()
+	// 	}
+	// }()
 
 	log.Println("Gopher is now running")
 	startupSpan.Finish()

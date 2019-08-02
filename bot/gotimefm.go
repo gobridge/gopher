@@ -21,17 +21,19 @@ func (b *Bot) GoTimeFM() {
 	}
 	resp, err := b.client.Do(req)
 	if err != nil {
-		panic(err)
+		b.logf("error retriving gotimefm streaming status: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b.logf("got non-200 code from gotimefm: %d\n", resp.StatusCode)
+		return
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		b.logf("got error while reading body for gotimefm %s", err)
-		return
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		b.logf("got non-200 code from gotimefm: %d\n", resp.StatusCode)
 		return
 	}
 
