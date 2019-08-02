@@ -178,9 +178,8 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 			return lastID
 		}
 
-		_, _, err = b.slackBotAPI.PostMessageContext(ctx, pubChannel,
-			slack.MsgOptionAsUser(true),
-			slack.MsgOptionText(fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link()), false),
+		msg := fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link())
+		err = b.postMessage(ctx, pubChannel, msg,
 			slack.MsgOptionAttachments(slack.Attachment{
 				Title:     cl.Subject,
 				TitleLink: cl.link(),
