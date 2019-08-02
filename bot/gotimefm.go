@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/nlopes/slack"
 )
 
 type goTimeFMStatus struct {
@@ -47,10 +45,7 @@ func (b *Bot) GoTimeFM() {
 	timeNow := time.Now()
 	if status.Streaming && timeNow.Sub(b.goTimeLastNotified).Hours() > 24 {
 		b.goTimeLastNotified = timeNow
-		_, _, err := b.slackBotAPI.PostMessageContext(ctx, b.channels["gotimefm"].slackID,
-			slack.MsgOptionAsUser(true),
-			slack.MsgOptionText(":tada: GoTimeFM is now live :tada:", false),
-		)
+		err := b.postMessage(ctx, b.channels["gotimefm"].slackID, ":tada: GoTimeFM is now live :tada:")
 		if err != nil {
 			b.logf("got error while notifying slack: %s\n", err)
 		}
