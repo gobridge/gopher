@@ -97,7 +97,7 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span, opsCha
 	for _, channel := range channels {
 		channelName := strings.ToLower(channel.Name)
 		if chn, ok := b.channels[channelName]; ok {
-			chn.slackID = "#" + channel.ID
+			chn.slackID = channel.ID
 			b.channels[channelName] = chn
 		}
 	}
@@ -131,7 +131,7 @@ Here's a list of a few channels you could join:
 		if !val.welcome {
 			continue
 		}
-		welcomeMessage += `<` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
+		welcomeMessage += `<#` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
 	}
 
 	welcomeMessage += `
@@ -592,7 +592,7 @@ func recommendedChannels(ctx context.Context, b *Bot, event *slack.MessageEvent)
 		if val.special {
 			continue
 		}
-		message.Text += `- <` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
+		message.Text += `- <#` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
 	}
 
 	err := b.postMessage(ctx, event.User, "Here is a list of recommended channels:",
