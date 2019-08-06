@@ -71,6 +71,15 @@ func (b *Bot) getID(ctx context.Context) (string, error) {
 	return ai.UserID, nil
 }
 
+// ChannelID returns the slack channel ID for channel name.
+//
+// Bot must be initialized before using this method and the channel
+// name must exist in the channels map populated in NewBot.
+func (b *Bot) ChannelID(channel string) (string, bool) {
+	ch, ok := b.channels[channel]
+	return ch.slackID, ok
+}
+
 // Init must be called before anything else in order to initialize the bot
 func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span, opsChannel string) error {
 	initSpan := span.NewChild("b.Init")
@@ -109,7 +118,7 @@ func (b *Bot) Init(ctx context.Context, rtm *slack.RTM, span *trace.Span, opsCha
 	b.logf("Initialized %s with ID (%q) and msgprefix (%q) \n", b.name, b.id, b.msgprefix)
 	if b.opsChannel != "" {
 		childSpan := initSpan.NewChild("b.AnnouncingStartupFinish")
-		err = b.postMessage(ctx, b.opsChannel, `Deployed version: `+b.version)
+		err = b.PostMessage(ctx, b.opsChannel, `Deployed version: `+b.version)
 		childSpan.Finish()
 		if err != nil {
 			b.logf(`failed to deploy version: %s`, b.version)
@@ -200,7 +209,7 @@ func (b *Bot) TeamJoined(event *slack.TeamJoinEvent) {
 	message := `Hello ` + event.User.Name + welcomeMessage
 
 	ctx := trace.NewContext(context.Background(), span)
-	err := b.postMessage(ctx, event.User.ID, message,
+	err := b.PostMessage(ctx, event.User.ID, message,
 		slack.MsgOptionPostMessageParameters(slack.PostMessageParameters{LinkNames: 1}),
 	)
 	if err != nil {
@@ -576,7 +585,7 @@ Finally, <https://github.com/golang/go/wiki#learning-more-about-go> will give a 
 	if private {
 		whereTo = event.User
 	}
-	err := b.postMessage(ctx, whereTo, "Here are some resources you should check out if you are learning / new to Go:",
+	err := b.PostMessage(ctx, whereTo, "Here are some resources you should check out if you are learning / new to Go:",
 		slack.MsgOptionAttachments(newbieResources),
 	)
 	if err != nil {
@@ -595,7 +604,7 @@ func recommendedChannels(ctx context.Context, b *Bot, event *slack.MessageEvent)
 		message.Text += `- <#` + val.slackID + `|` + idx + `> -> ` + val.description + "\n"
 	}
 
-	err := b.postMessage(ctx, event.User, "Here is a list of recommended channels:",
+	err := b.PostMessage(ctx, event.User, "Here is a list of recommended channels:",
 		slack.MsgOptionAttachments(message),
 	)
 	if err != nil {
@@ -676,14 +685,14 @@ func (b *Bot) suggestPlayground(ctx context.Context, event *slack.MessageEvent) 
 			return
 		}
 
-		err = b.postMessage(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`)
+		err = b.PostMessage(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`)
 		if err != nil {
 			b.logf("%s\n", err)
 			return
 		}
 	}
 
-	err := b.postMessage(ctx, event.User,
+	err := b.PostMessage(ctx, event.User,
 		`Hello. I've noticed you uploaded a Go file. To facilitate collaboration and make `+
 			`this easier for others to share back the snippet, please consider using: `+
 			`<https://play.golang.org>. If you wish to not link against the playground, please use `+
@@ -752,7 +761,7 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 		return
 	}
 
-	err = b.postMessage(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`,
+	err = b.PostMessage(ctx, event.Channel, `The above code in playground: <https://play.golang.org/p/`+string(linkID)+`>`,
 		slack.MsgOptionTS(event.ThreadTimestamp),
 	)
 	if err != nil {
@@ -760,7 +769,7 @@ func (b *Bot) suggestPlayground2(ctx context.Context, event *slack.MessageEvent)
 		return
 	}
 
-	err = b.postMessage(ctx, event.User,
+	err = b.PostMessage(ctx, event.User,
 		`Hello. I've noticed you've written a large block of text (more than 9 lines). `+
 			`To make the conversation easier to follow the conversation and facilitate collaboration, `+
 			`please consider using: <https://play.golang.org> if you shared code. If you wish to not `+
@@ -776,7 +785,7 @@ func (b *Bot) respond(ctx context.Context, event *slack.MessageEvent, response s
 	if b.devMode {
 		b.logf("should reply to message %s with %s\n", event.Text, response)
 	}
-	err := b.postMessage(ctx, event.Channel, response,
+	err := b.PostMessage(ctx, event.Channel, response,
 		slack.MsgOptionTS(event.ThreadTimestamp),
 	)
 	if err != nil {
@@ -799,7 +808,7 @@ func (b *Bot) respondUnfurled(ctx context.Context, event *slack.MessageEvent, re
 	}
 }
 
-func (b *Bot) postMessage(ctx context.Context, channel, text string, opts ...slack.MsgOption) error {
+func (b *Bot) PostMessage(ctx context.Context, channel, text string, opts ...slack.MsgOption) error {
 	opts = append(opts,
 		slack.MsgOptionAsUser(true),
 		slack.MsgOptionDisableLinkUnfurl(),

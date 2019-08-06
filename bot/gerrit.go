@@ -174,7 +174,7 @@ func (b *Bot) processCLList(ctx context.Context, lastID int, span *trace.Span) i
 		}
 
 		msg := fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link())
-		err = b.postMessage(ctx, b.channels["golang-cls"].slackID, msg,
+		err = b.PostMessage(ctx, b.channels["golang-cls"].slackID, msg,
 			slack.MsgOptionAttachments(slack.Attachment{
 				Title:     cl.Subject,
 				TitleLink: cl.link(),

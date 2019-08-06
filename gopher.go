@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/gobridge/gopher/bot"
+	"github.com/gobridge/gopher/gotime"
 
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/trace"
@@ -157,6 +158,20 @@ func main() {
 		log.Fatalln("Unable to init bot:", err)
 	}
 
+	// Event handling
+	go func() {
+		for msg := range slackBotRTM.IncomingEvents {
+			switch message := msg.Data.(type) {
+			case *slack.MessageEvent:
+				go b.HandleMessage(message)
+
+			case *slack.TeamJoinEvent:
+				go b.TeamJoined(message)
+			}
+		}
+	}()
+
+	// Gerrit CL Notifications
 	if !devMode {
 		_, err = b.GetLastSeenCL(ctx)
 		if err != nil {
@@ -179,18 +194,35 @@ func main() {
 		log.Printf("gerrit updates disabled in devMode")
 	}
 
-	go func() {
-		for msg := range slackBotRTM.IncomingEvents {
-			switch message := msg.Data.(type) {
-			case *slack.MessageEvent:
-				go b.HandleMessage(message)
-
-			case *slack.TeamJoinEvent:
-				go b.TeamJoined(message)
+	// GoTime Livestream Notifications
+	goTimeID, ok := b.ChannelID("gotimefm")
+	if ok {
+		notify := func() bool {
+			err = b.PostMessage(ctx, goTimeID, ":tada: GoTimeFM is now live :tada:")
+			if err != nil {
+				log.Printf("error posting to #gotimefm: %v", err)
+				return false
 			}
+			return true
 		}
-	}()
 
+		gt := gotime.New(traceHTTPClient, 30*time.Minute, notify)
+		go func() {
+			gotimefm := time.NewTicker(1 * time.Minute)
+			defer gotimefm.Stop()
+
+			for range gotimefm.C {
+				err := gt.Poll(ctx)
+				if err != nil {
+					log.Printf("polling GoTime: %v", err)
+				}
+			}
+		}()
+	} else {
+		log.Printf("unable to retrieve gotimefm channel ID, GoTime livestream notification disabled")
+	}
+
+	// healthz endpoint
 	go func(traceClient *trace.Client) {
 		healthz := func(traceClient *trace.Client) http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
@@ -223,15 +255,6 @@ func main() {
 
 		log.Fatal(s.ListenAndServe())
 	}(traceClient)
-
-	// go func() {
-	// 	gotimefm := time.NewTicker(1 * time.Minute)
-	// 	defer gotimefm.Stop()
-
-	// 	for range gotimefm.C {
-	// 		b.GoTimeFM()
-	// 	}
-	// }()
 
 	log.Println("Gopher is now running")
 	startupSpan.Finish()
