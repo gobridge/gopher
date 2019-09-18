@@ -43,7 +43,7 @@ func (s *GCPStore) Exists(ctx context.Context, number int) (bool, error) {
 	var cl storedCL
 	err := s.ds.Get(ctx, s.key(number), &cl)
 	if err == datastore.ErrNoSuchEntity {
-		return false, err
+		return false, nil
 	}
 	return true, err
 }
