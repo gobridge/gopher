@@ -35,7 +35,7 @@ func (s *GCPStore) LatestNumber(ctx context.Context) (int, error) {
 }
 
 func (s *GCPStore) Put(ctx context.Context, number int, cl storedCL) error {
-	_, err := s.ds.Put(ctx, s.key(number), cl)
+	_, err := s.ds.Put(ctx, s.key(number), &cl)
 	return err
 }
 
