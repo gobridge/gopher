@@ -21,7 +21,7 @@ type storedCL struct {
 	CrawledAt time.Time `datastore:"CrawledAt"`
 }
 
-type gerritCL struct {
+type GerritCL struct {
 	Project         string `json:"project"`
 	ChangeID        string `json:"change_id"`
 	Number          int    `json:"_number"`
@@ -36,11 +36,11 @@ type gerritCL struct {
 	} `json:"revisions"`
 }
 
-func (cl *gerritCL) link() string {
+func (cl *GerritCL) Link() string {
 	return fmt.Sprintf("https://golang.org/cl/%d/", cl.Number)
 }
 
-func (cl *gerritCL) message() string {
+func (cl *GerritCL) Message() string {
 	subject := cl.Subject
 	if cl.Project != "go" {
 		subject = fmt.Sprintf("[%s] %s", cl.Project, subject)
@@ -54,7 +54,7 @@ type Gerrit struct {
 	store  Store
 	http   *http.Client
 	logf   func(message string, args ...interface{})
-	notify func(message string) bool
+	notify func(GerritCL) bool
 
 	lastID int
 }
@@ -71,7 +71,7 @@ type Store interface {
 var ErrNotFound = errors.New("CL not found")
 
 // New creates an initializes an instance of Gerrit.
-func New(ctx context.Context, s Store, http *http.Client, logf func(message string, args ...interface{}), notify func(message string) bool) (*Gerrit, error) {
+func New(ctx context.Context, s Store, http *http.Client, logf func(message string, args ...interface{}), notify func(GerritCL) bool) (*Gerrit, error) {
 	lastID, err := s.LatestNumber(ctx)
 	switch err {
 	case nil:
@@ -121,7 +121,7 @@ func (g *Gerrit) Poll(ctx context.Context) {
 	// https://gerrit-review.googlesource.com/Documentation/rest-api.html#output
 	body = bytes.TrimPrefix(body, []byte(")]}'"))
 
-	var cls []gerritCL
+	var cls []GerritCL
 	err = json.Unmarshal(body, &cls)
 	if err != nil {
 		g.logf("unmarshaling response: %v\n", err)
@@ -150,8 +150,8 @@ func (g *Gerrit) Poll(ctx context.Context) {
 		}
 
 		err = g.store.Put(ctx, cl.Number, storedCL{
-			URL:       cl.link(),
-			Message:   cl.message(),
+			URL:       cl.Link(),
+			Message:   cl.Message(),
 			CrawledAt: time.Now(),
 		})
 		if err != nil {
@@ -159,8 +159,7 @@ func (g *Gerrit) Poll(ctx context.Context) {
 			return
 		}
 
-		msg := fmt.Sprintf("[%d] %s: %s", cl.Number, cl.message(), cl.link())
-		if !g.notify(msg) {
+		if !g.notify(cl) {
 			return
 		}
 

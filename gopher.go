@@ -307,8 +307,16 @@ func main() {
 
 	// Gerrit CL Notifications
 	if !devMode {
-		notify := func(msg string) bool {
-			err = b.PostMessage(ctx, "golang-cls", msg)
+		notify := func(cl gerrit.GerritCL) bool {
+			msg := fmt.Sprintf("[%d] %s: %s", cl.Number, cl.Message(), cl.Link())
+			err = b.PostMessage(ctx, "golang-cls", msg,
+				slack.MsgOptionAttachments(slack.Attachment{
+					Title:     cl.Subject,
+					TitleLink: cl.Link(),
+					Text:      cl.Revisions[cl.CurrentRevision].Commit.Message,
+					Footer:    cl.ChangeID,
+				}),
+			)
 			if err != nil {
 				logf("error posting to #golang-cls: %v", err)
 				return false
