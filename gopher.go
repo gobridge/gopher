@@ -130,6 +130,12 @@ func main() {
 	}...)
 
 	joinHandler := handlers.Join(welcomeChannels)
+	if devMode {
+		// Disable join DMs when in devMode to prevent
+		// new users receiving multiple notifications.
+		logf("join DMs disabled in devMode")
+		joinHandler = bot.JoinHandlerFunc(func(context.Context, *slack.TeamJoinEvent, bot.JoinResponder) {})
+	}
 
 	msgHandlers := handlers.ProcessLinear(
 		handlers.ReactWhenContains("my adorable little gophers", "gopher"),
