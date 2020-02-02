@@ -25,11 +25,16 @@ func welcomeMessage(channels []Channel) string {
 	}
 
 	return `Welcome to the Gophers Slack community.
+
+*Please read this message; it contains helpful suggestions for interacting within the community.*
+
 This Slack is meant to connect gophers from all over the world in a central place.
 There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
 We have a few rules that you can see here: http://coc.golangbridge.org.
 
 To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
+
+Out of respect for the visually impaired, please refrain from using Slack threads, as they are not accessible for screen readers. Instead, post your replies within the channel.
 
 Here's a list of a few channels you could join:
 ` + welcomeChannels + `
