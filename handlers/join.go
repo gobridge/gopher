@@ -24,7 +24,7 @@ func welcomeMessage(channels []Channel) string {
 		welcomeChannels += fmt.Sprintf("- #%s -> %s\n", c.Name, c.Description)
 	}
 
-	return `Welcome to the Gophers Slack channel.
+	return `Welcome to the Gophers Slack community.
 This Slack is meant to connect gophers from all over the world in a central place.
 There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
 We have a few rules that you can see here: http://coc.golangbridge.org.
