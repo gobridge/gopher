@@ -19,6 +19,42 @@ type Channel struct {
 	Description string
 }
 
+	// Condition will check whether a message matches a condition.
+	Condition func(bot.Message, []string) bool
+)
+
+var (
+	// Exact will return true if a message contains an exact match to one
+	// or more strings.
+	Exact Condition = func(m bot.Message, strs []string) bool {
+		for _, str := range strs {
+			if m.TrimmedText == str {
+				return true
+			}
+		}
+		return false
+	}
+	// Contains will return true if a message contains an partial match to one
+	// or more strings.
+	Contains Condition = func(m bot.Message, strs []string) bool {
+		for _, str := range strs {
+			if strings.Contains(m.Event.Text, str) {
+				return true
+			}
+		}
+		return false
+	}
+	// HasPrefix will return true if a message begins with one or more strings.
+	HasPrefix Condition = func(m bot.Message, strs []string) bool {
+		for _, str := range strs {
+			if strings.HasPrefix(m.Event.Text, str) {
+				return true
+			}
+		}
+		return false
+	}
+)
+
 // ProcessLinear calls handlers in order.
 func ProcessLinear(hs ...bot.Handler) bot.Handler {
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
@@ -40,48 +76,53 @@ func RespondWhenContains(s string, response string) bot.Handler {
 // WhenDirectedToBot calls h when Message.DirectedToBot is true.
 func WhenDirectedToBot(h bot.Handler) bot.Handler {
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if m.DirectedToBot {
-			h.Handle(ctx, m, r)
+		if !m.DirectedToBot {
+			return
 		}
+		h.Handle(ctx, m, r)
 	})
 }
 
-// RespondTo responds to messages when Message.TrimmedText is in prompts.
-func RespondTo(prompts []string, response string) bot.Handler {
+// respond checks messages for matches and responds with a string if matched.
+func respond(isMatch Condition, prompts []string, response string) bot.Handler {
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		for _, prompt := range prompts {
-			if m.TrimmedText == prompt {
-				r.Respond(ctx, response)
-				return
+		if !isMatch(m, prompts) {
+			return
+		}
+		r.Respond(ctx, response)
+	})
+}
+
+// RespondWhenContains responds if a message contains one or more strings.
+func RespondWhenContains(s []string, response string) bot.Handler {
+	return respond(Contains, s, response)
+}
+
+// RespondWhenExact responds if exact strings are present in a message.
+func RespondWhenExact(s []string, response string) bot.Handler {
+	return respond(Exact, s, response)
+}
+
+// react adds reactions to messages when string(s) meet a condition.
+func react(isMatch Condition, s []string, reactions ...string) bot.Handler {
+	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
+		for _, reaction := range reactions {
+			if !isMatch(m, []string{reaction}) {
+				continue
 			}
+			r.React(ctx, reaction)
 		}
 	})
 }
 
 // ReactWhenContains adds reactions to messages that contain s.
 func ReactWhenContains(s string, reactions ...string) bot.Handler {
-	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if !strings.Contains(m.Event.Text, s) {
-			return
-		}
-
-		for _, reaction := range reactions {
-			r.React(ctx, reaction)
-		}
-	})
+	return react(Contains, []string{s}, reactions...)
 }
 
 // ReactWhenHasPrefix addes reactions to messages when Message.TrimmedText has prefix s.
 func ReactWhenHasPrefix(s string, reactions ...string) bot.Handler {
-	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if !strings.HasPrefix(m.TrimmedText, s) {
-			return
-		}
-
-		for _, reaction := range reactions {
-			r.React(ctx, reaction)
-		}
-	})
+	return react(HasPrefix, []string{s}, reactions...)
 }
 
 // ReactWhenContainsRand randomly calls ReactWhenContains.
@@ -112,12 +153,10 @@ func BotStack(prompts []string) bot.Handler {
 	msg += "\nYou can find my source code at: <https://github.com/gobridge/gopher>."
 
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		for _, prompt := range prompts {
-			if m.TrimmedText == prompt {
-				r.Respond(ctx, msg)
-				return
-			}
+		if !Exact(m, prompts) {
+			return
 		}
+		r.Respond(ctx, msg)
 	})
 }
 
@@ -126,7 +165,7 @@ func BotStack(prompts []string) bot.Handler {
 func BotVersion(prompt, version string) bot.Handler {
 	msg := "My version is: " + version
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if m.TrimmedText != prompt {
+		if !Exact(m, []string{prompt}) {
 			return
 		}
 		r.Respond(ctx, msg)
@@ -137,15 +176,13 @@ func BotVersion(prompt, version string) bot.Handler {
 // matches one of prompts.
 func CoinFlip(prompts []string) bot.Handler {
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		for _, prompt := range prompts {
-			if m.TrimmedText == prompt {
-				if rand.Intn(2) == 0 {
-					r.Respond(ctx, "heads")
-				} else {
-					r.Respond(ctx, "tails")
-				}
-				return
-			}
+		if !Exact(m, prompts) {
+			return
+		}
+		if rand.Intn(2) == 0 {
+			r.Respond(ctx, "heads")
+		} else {
+			r.Respond(ctx, "tails")
 		}
 	})
 }
@@ -159,8 +196,8 @@ func RecommendedChannels(prompt string, channels []Channel) bot.Handler {
 	}
 
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if m.TrimmedText != prompt {
-			return
+		if Exact(m, []string{prompt}) {
+			r.RespondWithAttachment(ctx, "Here is a list of recommended channels:", recommendedChannels)
 		}
 
 		r.RespondWithAttachment(ctx, "Here is a list of recommended channels:", recommendedChannels)
@@ -176,7 +213,7 @@ func SearchForLibrary(prefix string) bot.Handler {
 	)
 
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if !strings.HasPrefix(m.TrimmedText, prefix) {
+		if !HasPrefix(m, []string{prefix}) {
 			return
 		}
 
@@ -198,7 +235,7 @@ func SearchForLibrary(prefix string) bot.Handler {
 // After the prefix either a comic number or alias can be provided.
 func XKCD(prefix string, aliases map[string]int, logf bot.Logger) bot.Handler {
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if !strings.HasPrefix(m.TrimmedText, prefix) {
+		if !HasPrefix(m, []string{prefix}) {
 			return
 		}
 
@@ -225,7 +262,7 @@ func XKCD(prefix string, aliases map[string]int, logf bot.Logger) bot.Handler {
 // LinkToGoDoc responds with to messages with matchPrefix replaced by urlPrefix.
 func LinkToGoDoc(matchPrefix, urlPrefix string) bot.Handler {
 	return bot.HandlerFunc(func(ctx context.Context, m bot.Message, r bot.Responder) {
-		if !strings.HasPrefix(m.Event.Text, matchPrefix) {
+		if !HasPrefix(m, []string{matchPrefix}) {
 			return
 		}
 
