@@ -256,11 +256,6 @@ func main() {
 					`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
 				}, "\n"),
 			),
-			handlers.RespondWhenExact([]string{"threads"},
-				strings.Join([]string{"Out of respect for the visually impaired, please refrain from using Slack threads,",
-					"as they are not accessible for screen readers. Instead, post your replies within the channel.",
-				}, " "),
-			),
 			handlers.RespondWhenExact([]string{"help"},
 				strings.Join([]string{
 					`Here's a list of supported commands`,
