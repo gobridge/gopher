@@ -164,7 +164,7 @@ func main() {
 			handlers.RecommendedChannels("recommended channels", recommendedChannels),
 			handlers.NewbieResources("newbie resources"),
 			handlers.SearchForLibrary("library for"),
-			handlers.ReactWhenContains("threads", "Out of respect for the visually impaired, please refrain from using Slack threads, as they are not accessible for screen readers. Instead, post your replies within the channel."),
+
 			handlers.XKCD("xkcd:",
 				map[string]int{
 					"standards":    927,
@@ -258,6 +258,7 @@ func main() {
 					`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
 				}, "\n"),
 			),
+			handlers.RespondTo([]string{"threads"}, "Out of respect for the visually impaired, please refrain from using Slack threads, as they are not accessible for screen readers. Instead, post your replies within the channel."),
 			handlers.RespondTo([]string{"help"},
 				strings.Join([]string{
 					`Here's a list of supported commands`,
