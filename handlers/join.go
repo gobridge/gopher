@@ -29,16 +29,14 @@ This Slack is meant to connect gophers from all over the world in a central plac
 There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
 We have a few rules that you can see here: http://coc.golangbridge.org.
 
-To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
-
-Out of respect for the visually impaired, please refrain from using Slack threads, as they are not accessible for screen readers. Instead, post your replies within the channel.
-
 Here's a list of a few channels you could join:
 ` + welcomeChannels + `
 
 If you want more suggestions, type "recommended channels".
 There are quite a few other channels, depending on your interests or location (we have city / country wide channels).
 Just click on the channel list and search for anything that crosses your mind.
+
+To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
 If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
 
