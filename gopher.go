@@ -258,7 +258,7 @@ func main() {
 					`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
 				}, "\n"),
 			),
-			handlers.RespondTo([]string{"threads"}, "Out of respect for the visually impaired, please refrain from using Slack threads, as they are not accessible for screen readers. Instead, post your replies within the channel."),
+			handlers.RespondTo([]string{"threads"}, "Out of respect for those who rely on screen readers to use Slack, we ask that you please refrain from using threads due to accessibility concerns. It's challenging for those users to discover and contribute to active threads in channels, because doing so relies on scrolling up through channel history and visually identifying a threaded conversation. Instead, please post your replies within the channel."),
 			handlers.RespondTo([]string{"help"},
 				strings.Join([]string{
 					`Here's a list of supported commands`,
