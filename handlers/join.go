@@ -34,7 +34,7 @@ We have a few rules that you can see here: http://coc.golangbridge.org.
 
 To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
-Out of respect for the visually impaired, please refrain from using Slack threads, as they are not accessible for screen readers. Instead, post your replies within the channel.
+Out of respect for those who rely on screen readers to use Slack, we ask that you please refrain from using threads due to accessibility concerns. It's challenging for those users to discover and contribute to active threads in channels, because doing so relies on scrolling up through channel history and visually identifying a threaded conversation. Instead, please post your replies within the channel.
 
 Here's a list of a few channels you could join:
 ` + welcomeChannels + `
