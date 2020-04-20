@@ -38,14 +38,16 @@ Just click on the channel list and search for anything that crosses your mind.
 
 To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
-If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
+If you are new to Go and want a copy of the <https://www.manning.com/books/go-in-action|Go In Action book>, please send an email to @wkennedy at bill@ardanlabs.com
 
-If you are interested in a free copy of the Go Web Programming book by Sau Sheong Chang, @sausheong, please send him an email at sausheong@gmail.com
+If you are interested in a free copy of the <https://www.manning.com/books/go-web-programming|Go Web Programming> book by Sau Sheong Chang, @sausheong, please send him an email at sausheong@gmail.com
 
 In case you want to customize your profile picture, you can use https://gopherize.me/ to create a custom gopher.
 
 Final thing, #general might be too chatty at times but don't be shy to ask your Go related question.
 
 
-Now, enjoy the community and have fun.`
+Now, enjoy the community and have fun.
+
+PS. Want to contribute to my welcome message? You can find my source code at: <https://github.com/gobridge/gopher>.`
 }
