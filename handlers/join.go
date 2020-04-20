@@ -38,7 +38,7 @@ Just click on the channel list and search for anything that crosses your mind.
 
 To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
-If you are new to Go and want a copy of the <https://www.manning.com/books/go-in-action|Go In Action book>, please send an email to @wkennedy at bill@ardanlabs.com
+If you are new to Go and want a copy of the <https://www.manning.com/books/go-in-action|Go In Action> book, please send an email to @wkennedy at bill@ardanlabs.com
 
 If you are interested in a free copy of the <https://www.manning.com/books/go-web-programming|Go Web Programming> book by Sau Sheong Chang, @sausheong, please send him an email at sausheong@gmail.com
 
