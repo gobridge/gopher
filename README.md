@@ -3,7 +3,8 @@
 [![GoDoc](https://godoc.org/github.com/gobridge/gopher?status.svg)](https://godoc.org/github.com/gobridge/gopher)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gobridge/gopher)](https://goreportcard.com/report/github.com/gobridge/gopher)
 
-This is the Slack bot for the Gophers Slack.
+This is the deprecated Slack bot for the Gophers Slack. The new version [can be
+found here](https://github.com/gobridge/gopherbot).
 
 You can get an invite from [here](https://invite.slack.golangbridge.org/)
 
