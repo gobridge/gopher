@@ -164,6 +164,7 @@ func main() {
 			handlers.RecommendedChannels("recommended channels", recommendedChannels),
 			handlers.NewbieResources("newbie resources"),
 			handlers.SearchForLibrary("library for"),
+
 			handlers.XKCD("xkcd:",
 				map[string]int{
 					"standards":    927,
@@ -257,6 +258,7 @@ func main() {
 					`- <https://segment.com/blog/allocation-efficiency-in-high-performance-go-services/>`,
 				}, "\n"),
 			),
+			handlers.RespondTo([]string{"threads"}, "Out of respect for those who rely on screen readers to use Slack, we ask that you please refrain from using threads due to accessibility concerns. It's challenging for those users to discover and contribute to active threads in channels, because doing so relies on scrolling up through channel history and visually identifying a threaded conversation. Instead, please post your replies within the channel."),
 			handlers.RespondTo([]string{"help"},
 				strings.Join([]string{
 					`Here's a list of supported commands`,

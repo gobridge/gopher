@@ -24,10 +24,17 @@ func welcomeMessage(channels []Channel) string {
 		welcomeChannels += fmt.Sprintf("- #%s -> %s\n", c.Name, c.Description)
 	}
 
-	return `Welcome to the Gophers Slack channel.
+	return `Welcome to the Gophers Slack community.
+
+*Please read this message; it contains helpful suggestions for interacting within the community.*
+
 This Slack is meant to connect gophers from all over the world in a central place.
 There is also a forum: https://forum.golangbridge.org, you might want to check it out as well.
 We have a few rules that you can see here: http://coc.golangbridge.org.
+
+To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
+
+Out of respect for those who rely on screen readers to use Slack, we ask that you please refrain from using threads due to accessibility concerns. It's challenging for those users to discover and contribute to active threads in channels, because doing so relies on scrolling up through channel history and visually identifying a threaded conversation. Instead, please post your replies within the channel.
 
 Here's a list of a few channels you could join:
 ` + welcomeChannels + `
@@ -35,8 +42,6 @@ Here's a list of a few channels you could join:
 If you want more suggestions, type "recommended channels".
 There are quite a few other channels, depending on your interests or location (we have city / country wide channels).
 Just click on the channel list and search for anything that crosses your mind.
-
-To share code, you should use: https://play.golang.org/ as it makes it easy for others to help you.
 
 If you are new to Go and want a copy of the Go In Action book, https://www.manning.com/books/go-in-action, please send an email to @wkennedy at bill@ardanlabs.com
 
